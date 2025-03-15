@@ -1,7 +1,6 @@
 import pickle
 import requests
 import streamlit as st
-from surprise import Prediction
 
 # TMDb API configuration
 TMDB_API_KEY = st.secrets["TMDB_API_KEY"]  # Store your API key in Streamlit secrets
