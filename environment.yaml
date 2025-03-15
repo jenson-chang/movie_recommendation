@@ -8,5 +8,5 @@ dependencies:
     - streamlit
     - pip:
         - pickle
-        - scikit-surprise
+        - surprise
         - requests
