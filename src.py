@@ -1,10 +1,7 @@
-import streamlit as st
-import pandas as pd
-import altair as alt
 import pickle
-from surprise import Prediction
 import requests
-import os
+import streamlit as st
+from surprise import Prediction
 
 # TMDb API configuration
 TMDB_API_KEY = st.secrets["TMDB_API_KEY"]  # Store your API key in Streamlit secrets
@@ -60,6 +57,7 @@ def get_top_n_for_user(predictions, user_id, n=5):
 
     # Return top-N recommendations
     return user_predictions[:n]
+
 
 with open("predictions.pkl", "rb") as file:
     predictions = pickle.load(file)

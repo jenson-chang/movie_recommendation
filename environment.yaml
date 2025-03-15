@@ -6,7 +6,6 @@ dependencies:
     - altair
     - pandas
     - streamlit
-    - scikit-surprise
     - pip:
         - pickle
         - scikit-surprise
