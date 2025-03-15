@@ -3,7 +3,6 @@ channels:
     - defaults
 dependencies:
     - ipykernel
-    - altair
     - pandas
     - streamlit
     - scikit-surprise
