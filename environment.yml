@@ -9,5 +9,4 @@ dependencies:
     - scikit-surprise
     - pip
     - pip:
-        - surprise
         - requests
