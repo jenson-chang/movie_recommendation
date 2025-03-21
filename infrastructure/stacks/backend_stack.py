@@ -25,6 +25,11 @@ class BackendStack(Stack):
             container_insights=True
         )
 
+        # Get Docker image configuration from environment variables
+        docker_registry = os.getenv("DOCKER_REGISTRY", "jensonchang/movies")
+        backend_tag = os.getenv("BACKEND_IMAGE_TAG", "backend-latest")
+        backend_image = f"{docker_registry}:{backend_tag}"
+
         # Create Fargate Service
         fargate_service = ecs_patterns.ApplicationLoadBalancedFargateService(
             self, "MovieRecommendationService",
@@ -33,7 +38,7 @@ class BackendStack(Stack):
             memory_limit_mib=int(os.getenv("BACKEND_MEMORY", "512")),
             desired_count=int(os.getenv("DESIRED_COUNT", "2")),
             task_image_options=ecs_patterns.ApplicationLoadBalancedTaskImageOptions(
-                image=ecs.ContainerImage.from_registry("jensonchang/movies:backend-latest"),
+                image=ecs.ContainerImage.from_registry(backend_image),
                 container_port=int(os.getenv("BACKEND_PORT", "8000")),
                 environment={
                     "AWS_REGION": os.getenv("CDK_DEFAULT_REGION"),

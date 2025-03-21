@@ -1,8 +1,15 @@
 import requests
 import streamlit as st
+import os
 
 # TMDb API configuration
-TMDB_API_KEY = st.secrets["TMDB_API_KEY"]  # Store your API key in Streamlit secrets
+try:
+    # Try to get API key from environment variable (production)
+    TMDB_API_KEY = os.environ["TMDB_API_KEY"]
+except KeyError:
+    # Fall back to Streamlit secrets (local development)
+    TMDB_API_KEY = st.secrets["TMDB_API_KEY"]
+
 TMDB_BASE_URL = "https://api.themoviedb.org/3"
 BACKEND_URL = "http://backend:8000"  # FastAPI backend URL using Docker service name
 

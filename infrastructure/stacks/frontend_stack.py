@@ -5,6 +5,7 @@ from aws_cdk import (
     aws_ec2 as ec2,
     aws_route53 as route53,
     aws_certificatemanager as acm,
+    aws_secretsmanager as secretsmanager,
     Duration,
     CfnOutput,
 )
@@ -27,6 +28,23 @@ class FrontendStack(Stack):
             container_insights=True
         )
 
+        # Create Secrets Manager secret for TMDB API key
+        tmdb_secret = secretsmanager.Secret(self, "TMDBAPISecret",
+            secret_name="movie-recommendation/tmdb-api-key",
+            description="TMDb API Key for movie recommendations",
+            generate_secret_string=secretsmanager.SecretStringGenerator(
+                secret_string_template='{"TMDB_API_KEY": ""}',
+                generate_string_key="TMDB_API_KEY",
+                exclude_punctuation=True,
+                password_length=32,
+            )
+        )
+
+        # Get Docker image configuration from environment variables
+        docker_registry = os.getenv("DOCKER_REGISTRY", "jensonchang/movies")
+        frontend_tag = os.getenv("FRONTEND_IMAGE_TAG", "frontend-latest")
+        frontend_image = f"{docker_registry}:{frontend_tag}"
+
         # Create Fargate Service
         fargate_service = ecs_patterns.ApplicationLoadBalancedFargateService(
             self, "MovieRecommendationFrontendService",
@@ -35,17 +53,23 @@ class FrontendStack(Stack):
             memory_limit_mib=int(os.getenv("FRONTEND_MEMORY", "512")),
             desired_count=int(os.getenv("DESIRED_COUNT", "2")),
             task_image_options=ecs_patterns.ApplicationLoadBalancedTaskImageOptions(
-                image=ecs.ContainerImage.from_registry("jensonchang/movies:frontend-latest"),
-                container_port=int(os.getenv("FRONTEND_PORT", "80")),
+                image=ecs.ContainerImage.from_registry(frontend_image),
+                container_port=int(os.getenv("FRONTEND_PORT", "8501")),
                 environment={
                     "AWS_REGION": os.getenv("CDK_DEFAULT_REGION"),
                     "REACT_APP_API_URL": "http://backend-service:8000",  # Internal service discovery
+                },
+                secrets={
+                    "TMDB_API_KEY": ecs.Secret.from_secrets_manager(tmdb_secret, field="TMDB_API_KEY")
                 }
             ),
             public_load_balancer=True,  # Make the ALB public-facing
             assign_public_ip=True,  # Allow tasks to have public IPs
             health_check_grace_period=Duration.seconds(int(os.getenv("HEALTH_CHECK_GRACE_PERIOD", "60"))),
         )
+
+        # Grant the task role permission to access the secret
+        tmdb_secret.grant_read(fargate_service.task_definition.task_role)
 
         # Add auto scaling
         scaling = fargate_service.service.auto_scale_task_count(
