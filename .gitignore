@@ -1,3 +1,97 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Virtual Environment
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# CDK
+cdk.out/
+cdk.context.json
+.cdk.staging/
+cdk.out/
+*.js
+!jest.config.js
+*.d.ts
+!jest.config.d.ts
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+*.sublime-workspace
+*.sublime-project
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local development
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Model files
+*.pkl
+*.h5
+*.model
+models/*.pkl
+models/*.h5
+models/*.model
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# AWS
+.aws/
+aws.json
+
 .streamlit/
 environment.yml
 backend/model.pkl
+/infrastructure/.venv
