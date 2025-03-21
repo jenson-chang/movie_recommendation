@@ -3,6 +3,7 @@ from pathlib import Path
 import logging
 import re
 from collections import defaultdict
+import zipfile
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -28,12 +29,13 @@ def parse_prediction(pred_str):
 def preprocess_model():
     """Convert the model predictions into a more efficient format."""
     try:
-        # Load the original model
-        model_path = Path("models/model.pkl")
+        # Load the original model from zip file
+        model_path = Path("models/model.zip")
         logger.info(f"Loading model from {model_path.absolute()}")
         
-        with open(model_path, "rb") as f:
-            model = pickle.load(f)
+        with zipfile.ZipFile(model_path, 'r') as zip_ref:
+            with zip_ref.open('model.pkl') as pkl_file:
+                model = pickle.load(pkl_file)
         
         logger.info(f"Loaded original model with {len(model)} predictions")
         
@@ -58,7 +60,7 @@ def preprocess_model():
         # Convert defaultdict to regular dict for serialization
         preprocessed_model = dict(user_predictions)
         
-        # Save the preprocessed model
+        # Save the preprocessed model directly as pickle file
         output_path = Path("models/preprocessed_model.pkl")
         with open(output_path, "wb") as f:
             pickle.dump(preprocessed_model, f)

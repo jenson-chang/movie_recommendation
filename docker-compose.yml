@@ -20,6 +20,8 @@ services:
     volumes:
       - ./backend:/app
       - backend-models:/app/models
+    environment:
+      - PYTHONUNBUFFERED=1
     restart: always
     networks:
       - app

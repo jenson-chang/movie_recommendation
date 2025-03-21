@@ -5,17 +5,17 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-# Create models directory
+# Create models directory and copy model file
 RUN mkdir -p models
-
-# Copy model file first
-COPY model.pkl models/
+COPY model.zip models/
 
 # Copy the rest of the application
 COPY . .
 
-# Run preprocessing
-RUN python preprocess_model.py
+# Run preprocessing and verify
+RUN python preprocess_model.py && \
+    ls -l models/preprocessed_model.pkl && \
+    echo "Preprocessing completed successfully"
 
 EXPOSE 8000
 

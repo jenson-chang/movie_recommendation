@@ -3,9 +3,13 @@ from typing import Dict, List, Tuple, Optional
 from pathlib import Path
 import pickle
 import logging
+import os
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
@@ -17,14 +21,23 @@ app = FastAPI(
 def load_model(model_path: str = "models/preprocessed_model.pkl") -> Optional[Dict[int, List[Tuple[int, float]]]]:
     """Load the preprocessed model from pickle file."""
     try:
+        # Log the current working directory and list files in models directory
+        logger.info(f"Current working directory: {os.getcwd()}")
+        models_dir = Path("models")
+        if models_dir.exists():
+            logger.info(f"Contents of models directory: {list(models_dir.glob('*'))}")
+        else:
+            logger.error("Models directory does not exist")
+            
         model_file = Path(model_path)
         logger.info(f"Attempting to load model from {model_file.absolute()}")
+        
         if not model_file.exists():
             logger.error(f"Model file {model_path} not found")
             raise FileNotFoundError(f"Model file {model_path} not found")
-        
-        with open(model_file, "rb") as file:
-            model = pickle.load(file)
+            
+        with open(model_file, "rb") as f:
+            model = pickle.load(f)
             logger.info(f"Model loaded successfully. Contains predictions for {len(model)} users")
             return model
     except Exception as e:
