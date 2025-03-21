@@ -20,13 +20,23 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: jensonchang/movies
+          tags: |
+            type=raw, value={{sha}},enable=${{github.ref_type != 'tag' }}
+            type=raw, value=latest
+
       - name: Build and push frontend image
         uses: docker/build-push-action@v6
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
-          tags: jensonchang/movies/frontend:latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 
       - name: Build and push backend image
         uses: docker/build-push-action@v6
@@ -34,4 +44,5 @@ jobs:
           context: ./backend
           file: ./backend/Dockerfile
           push: true
-          tags: jensonchang/movies/backend:latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
