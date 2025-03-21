@@ -47,6 +47,14 @@ st.sidebar.write("""
 - Data-driven insights for content acquisition
 """)
 
+st.sidebar.header("Tech Stack")
+st.sidebar.write("""
+- **Frontend:** Streamlit for interactive UI
+- **Backend:** FastAPI for high-performance API
+- **Machine Learning:** scikit-surprise for collaborative filtering
+- **Infrastructure:** AWS CDK and ECS Fargate for scalable deployment
+""")
+
 def fetch_movie_details(movie_id):
     """
     Fetch movie details including poster path and genres from TMDb API.
