@@ -13,7 +13,7 @@ from constructs import Construct
 import os
 
 class FrontendStack(Stack):
-    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, backend_alb_dns: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
         # Create VPC (reuse the same VPC as backend if needed)
@@ -57,7 +57,7 @@ class FrontendStack(Stack):
                 container_port=int(os.getenv("FRONTEND_PORT", "8501")),
                 environment={
                     "AWS_REGION": os.getenv("CDK_DEFAULT_REGION"),
-                    "REACT_APP_API_URL": "http://backend-service:8000",  # Internal service discovery
+                    "REACT_APP_API_URL": f"http://{backend_alb_dns}",  # Use backend ALB DNS name
                 },
                 secrets={
                     "TMDB_API_KEY": ecs.Secret.from_secrets_manager(tmdb_secret, field="TMDB_API_KEY")

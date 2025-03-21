@@ -5,6 +5,7 @@ from aws_cdk import (
     aws_ec2 as ec2,
     aws_servicediscovery as servicediscovery,
     Duration,
+    CfnOutput,
 )
 from constructs import Construct
 import os
@@ -57,4 +58,11 @@ class BackendStack(Stack):
             target_utilization_percent=int(os.getenv("SCALE_THRESHOLD", "70")),
             scale_in_cooldown=Duration.seconds(int(os.getenv("SCALE_COOLDOWN", "60"))),
             scale_out_cooldown=Duration.seconds(int(os.getenv("SCALE_COOLDOWN", "60")))
+        )
+
+        # Output the ALB DNS name
+        self.backend_alb_dns = fargate_service.load_balancer.load_balancer_dns_name
+        CfnOutput(self, "BackendLoadBalancerDNS",
+            value=self.backend_alb_dns,
+            description="Backend Load Balancer DNS Name"
         ) 

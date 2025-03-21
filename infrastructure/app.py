@@ -11,7 +11,7 @@ load_dotenv()
 app = cdk.App()
 
 # Create the backend stack
-BackendStack(app, "MovieRecommendationBackendStack",
+backend_stack = BackendStack(app, "MovieRecommendationBackendStack",
     env=cdk.Environment(
         account=os.getenv("CDK_DEFAULT_ACCOUNT"),
         region=os.getenv("CDK_DEFAULT_REGION")
@@ -20,6 +20,7 @@ BackendStack(app, "MovieRecommendationBackendStack",
 
 # Create the frontend stack
 FrontendStack(app, "MovieRecommendationFrontendStack",
+    backend_alb_dns=backend_stack.backend_alb_dns,  # Pass the backend ALB DNS name
     env=cdk.Environment(
         account=os.getenv("CDK_DEFAULT_ACCOUNT"),
         region=os.getenv("CDK_DEFAULT_REGION")

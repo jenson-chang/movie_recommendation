@@ -11,7 +11,14 @@ except KeyError:
     TMDB_API_KEY = st.secrets["TMDB_API_KEY"]
 
 TMDB_BASE_URL = "https://api.themoviedb.org/3"
-BACKEND_URL = "http://backend:8000"  # FastAPI backend URL using Docker service name
+
+# Configure backend URL based on environment
+try:
+    # Try to get backend URL from environment variable (production)
+    BACKEND_URL = os.environ["REACT_APP_API_URL"]
+except KeyError:
+    # Fall back to local development URL
+    BACKEND_URL = "http://localhost:8000"  # Local development URL
 
 # Add sidebar with product case study information
 st.sidebar.title("Product Case Study")
