@@ -80,7 +80,7 @@ def get_recommendations(user_id: int):
         st.error(f"Error connecting to backend: {str(e)}")
         return None
 
-st.title("Movie Recommender System")
+st.title("Movie Recommendation System")
 
 st.write("This app recommends movies based on your preferences.")
 

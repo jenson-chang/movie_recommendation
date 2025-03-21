@@ -1,10 +1,21 @@
 FROM python:3.11
 
-COPY requirements.txt app/requirements.txt
 WORKDIR /app
 
+COPY requirements.txt .
 RUN pip install -r requirements.txt
-COPY . /app
+
+# Create models directory
+RUN mkdir -p models
+
+# Copy model file first
+COPY model.pkl models/
+
+# Copy the rest of the application
+COPY . .
+
+# Run preprocessing
+RUN python preprocess_model.py
 
 EXPOSE 8000
 

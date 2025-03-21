@@ -19,6 +19,7 @@ services:
       - 8000:8000
     volumes:
       - ./backend:/app
+      - backend-models:/app/models
     restart: always
     networks:
       - app
@@ -27,3 +28,6 @@ services:
 networks:
   app:
     driver: bridge
+
+volumes:
+  backend-models:
