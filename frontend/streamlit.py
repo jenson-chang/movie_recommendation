@@ -94,7 +94,7 @@ def get_recommendations(user_id: int):
     Get movie recommendations from the backend API.
     """
     try:
-        response = requests.post(f"{BACKEND_URL}/predict/", json={"user_id": user_id})
+        response = requests.get(f"{BACKEND_URL}/recommendations/{user_id}?top_n=5")
         response.raise_for_status()
         data = response.json()
         return data["recommendations"]
@@ -123,15 +123,15 @@ if st.button("Get Recommendations"):
             num_cols = min(5, len(recommendations))  # Limit to 5 columns max
             cols = st.columns([1] * num_cols)
             
-            for idx, (movie_id, rating) in enumerate(recommendations[:num_cols]):
-                movie_details = fetch_movie_details(movie_id)
+            for idx, rec in enumerate(recommendations[:num_cols]):
+                movie_details = fetch_movie_details(rec['movie_id'])
                 
                 with cols[idx]:
                     if movie_details:
                         st.image(movie_details['poster_url'], caption=movie_details['title'])
-                        st.write(f"**Rating:** {rating:.2f}")
+                        st.write(f"**Rating:** {rec['estimated_rating']:.2f}")
                         if movie_details['genres']:
                             st.write("**Genres:** " + ", ".join(movie_details['genres']))
                     else:
-                        st.write(f"Movie ID: {movie_id}")
-                        st.write(f"Rating: {rating:.2f}")
+                        st.write(f"Movie ID: {rec['movie_id']}")
+                        st.write(f"Rating: {rec['estimated_rating']:.2f}")

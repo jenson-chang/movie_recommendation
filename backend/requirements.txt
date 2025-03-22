@@ -1,8 +1,9 @@
-pandas
-requests 
 fastapi
 uvicorn
+numpy<2.0
+pandas
+scikit-surprise
+pyarrow
+requests 
 python-multipart
 pydantic
-numpy<2.0
-scikit-surprise

@@ -1,4 +1,5 @@
 version: '3.8'
+
 services:
   frontend:
     build: frontend
@@ -14,18 +15,25 @@ services:
     container_name: frontend
     
   backend:
-    build: backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     ports:
-      - 8000:8000
+      - "8000:8000"
     volumes:
       - ./backend:/app
-      - backend-models:/app/models
+      - ./backend/models:/app/models
     environment:
       - PYTHONUNBUFFERED=1
     restart: always
     networks:
       - app
     container_name: backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 networks:
   app:

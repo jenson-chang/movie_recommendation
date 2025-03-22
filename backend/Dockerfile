@@ -1,22 +1,22 @@
 FROM python:3.11
 
+# Set working directory
 WORKDIR /app
 
-COPY requirements.txt .
+# Copy requirements first to leverage Docker cache
+COPY backend/requirements.txt .
+
+# Install Python dependencies
 RUN pip install -r requirements.txt
 
-# Create models directory and copy model file
+# Create models directory
 RUN mkdir -p models
-COPY model.zip models/
 
-# Copy the rest of the application
-COPY . .
+# Copy the application code
+COPY backend/ .
 
-# Run preprocessing and verify
-RUN python preprocess_model.py && \
-    ls -l models/preprocessed_model.pkl && \
-    echo "Preprocessing completed successfully"
-
+# Expose the port the app runs on
 EXPOSE 8000
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000" ,"--reload"]
+# Command to run the application
+CMD ["sh", "-c", "python preprocess_model.py && uvicorn main:app --host 0.0.0.0 --port 8000"]

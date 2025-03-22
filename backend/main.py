@@ -1,98 +1,128 @@
-from fastapi import FastAPI, HTTPException
-from typing import Dict, List, Tuple, Optional
-from pathlib import Path
-import pickle
-import logging
 import os
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
+import logging
+import numpy as np
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(
-    title="Movie Recommendation API",
-    description="API for movie recommendations using collaborative filtering",
-    version="1.0.0"
+# Global variables to store model data
+predictions = None
+user_id_to_indices = None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Load model data on startup and cleanup on shutdown."""
+    global predictions, user_id_to_indices
+    
+    model_path = 'models/model.npz'
+    if not os.path.exists(model_path):
+        logger.error(f"Model file not found at {model_path}")
+        raise RuntimeError(f"Model file not found at {model_path}")
+        
+    try:
+        logger.info(f"Loading model from: {model_path}")
+        loaded_data = np.load(model_path, allow_pickle=True)
+        predictions = loaded_data['predictions']
+        user_id_to_indices = loaded_data['user_id_to_indices'].item()
+        logger.info("Successfully loaded model data")
+    except Exception as e:
+        logger.error(f"Error loading model data: {e}")
+        raise RuntimeError(f"Failed to load model data: {str(e)}")
+    
+    yield
+    
+    # Cleanup (if needed) happens after the yield
+    logger.info("Shutting down...")
+
+app = FastAPI(lifespan=lifespan)
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-def load_model(model_path: str = "models/preprocessed_model.pkl") -> Optional[Dict[int, List[Tuple[int, float]]]]:
-    """Load the preprocessed model from pickle file."""
-    try:
-        # Log the current working directory and list files in models directory
-        logger.info(f"Current working directory: {os.getcwd()}")
-        models_dir = Path("models")
-        if models_dir.exists():
-            logger.info(f"Contents of models directory: {list(models_dir.glob('*'))}")
-        else:
-            logger.error("Models directory does not exist")
-            
-        model_file = Path(model_path)
-        logger.info(f"Attempting to load model from {model_file.absolute()}")
+def get_user_predictions(user_id, top_n=10):
+    """
+    Get top N predictions for a specific user.
+    
+    Args:
+        user_id (str): The user ID to get predictions for
+        top_n (int): Number of top predictions to return
         
-        if not model_file.exists():
-            logger.error(f"Model file {model_path} not found")
-            raise FileNotFoundError(f"Model file {model_path} not found")
+    Returns:
+        list: List of tuples (movie_id, estimated_rating) sorted by rating
+    """
+    try:
+        # Get predictions for user (O(1) lookup)
+        if user_id not in user_id_to_indices:
+            logger.warning(f"No predictions found for user {user_id}")
+            return []
             
-        with open(model_file, "rb") as f:
-            model = pickle.load(f)
-            logger.info(f"Model loaded successfully. Contains predictions for {len(model)} users")
-            return model
+        indices = user_id_to_indices[user_id]
+        user_predictions = predictions[indices]
+        
+        # Sort by estimated rating and get top N
+        sorted_predictions = np.sort(user_predictions, order='estimated_rating')[::-1][:top_n]
+        
+        # Convert to list of tuples (movie_id, estimated_rating)
+        return [(pred['movie_id'], pred['estimated_rating']) for pred in sorted_predictions]
+        
     except Exception as e:
-        logger.error(f"Error loading model: {str(e)}")
-        return None
+        logger.error(f"Error getting predictions for user {user_id}: {e}")
+        raise
 
-# Initialize model
-model = load_model()
-if model is None:
-    logger.error("Failed to load model during initialization")
-else:
-    logger.info("Model initialized successfully")
-
-@app.get("/")
-async def read_root() -> Dict[str, str]:
-    """Root endpoint returning welcome message."""
-    return {"message": "Welcome to the movie recommendation API!"}
-
-@app.post("/predict/")
-async def predict_movies(data: Dict[str, int]) -> Dict[str, List[Tuple[int, float]]]:
+@app.get("/recommendations/{user_id}")
+async def get_recommendations(user_id: str, top_n: int = 5):
     """
     Get movie recommendations for a specific user.
     
     Args:
-        data: Dictionary containing user_id
-    
+        user_id (str): The user ID to get recommendations for
+        top_n (int): Number of recommendations to return (default: 5)
+        
     Returns:
-        Dictionary containing list of recommended movies with their scores
+        dict: Dictionary containing recommendations
     """
-    if not model:
-        raise HTTPException(status_code=503, detail="Model not loaded")
-    
-    if "user_id" not in data:
-        raise HTTPException(status_code=400, detail="user_id is required")
-    
-    user_id = data["user_id"]
-    logger.info(f"Getting predictions for user {user_id}")
-    
     try:
-        # Get predictions for the user (already sorted by rating)
-        user_predictions = model.get(user_id, [])
+        # Get predictions using the new function
+        predictions = get_user_predictions(user_id, top_n)
         
-        logger.info(f"Found {len(user_predictions)} predictions for user {user_id}")
-        
-        # If user_id is not found, return error
-        if not user_predictions:
+        if not predictions:
             raise HTTPException(
                 status_code=404,
-                detail=f"User ID {user_id} not found in predictions"
+                detail=f"No recommendations found for user {user_id}"
             )
+            
+        # Format the response
+        recommendations = [
+            {
+                "movie_id": movie_id,
+                "estimated_rating": float(rating)
+            }
+            for movie_id, rating in predictions
+        ]
         
-        # Return top-N recommendations (already sorted)
-        recommendations = user_predictions[:5]
-        logger.info(f"Returning top {len(recommendations)} recommendations: {recommendations}")
-        return {"recommendations": recommendations}
+        return {
+            "user_id": user_id,
+            "recommendations": recommendations
+        }
+        
     except Exception as e:
-        logger.error(f"Error making predictions: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error making predictions: {str(e)}")
+        logger.error(f"Error getting recommendations for user {user_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error getting recommendations: {str(e)}"
+        )
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    return {"status": "healthy"}
