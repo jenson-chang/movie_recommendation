@@ -61,7 +61,10 @@ def get_user_predictions(user_id, top_n=10):
         list: List of tuples (movie_id, estimated_rating) sorted by rating
     """
     try:
-        # Get predictions for user (O(1) lookup)
+        # Convert user_id to string for lookup (model was trained with string IDs)
+        user_id = str(user_id)
+        
+        # Get predictions for user
         if user_id not in user_id_to_indices:
             logger.warning(f"No predictions found for user {user_id}")
             return []
@@ -69,11 +72,13 @@ def get_user_predictions(user_id, top_n=10):
         indices = user_id_to_indices[user_id]
         user_predictions = predictions[indices]
         
-        # Sort by estimated rating and get top N
-        sorted_predictions = np.sort(user_predictions, order='estimated_rating')[::-1][:top_n]
+        # Convert predictions to list of (movie_id, rating) tuples
+        prediction_tuples = [(pred[1], pred[2]) for pred in user_predictions]
         
-        # Convert to list of tuples (movie_id, estimated_rating)
-        return [(pred['movie_id'], pred['estimated_rating']) for pred in sorted_predictions]
+        # Sort by rating and get top N
+        sorted_predictions = sorted(prediction_tuples, key=lambda x: x[1], reverse=True)[:top_n]
+        
+        return sorted_predictions
         
     except Exception as e:
         logger.error(f"Error getting predictions for user {user_id}: {e}")

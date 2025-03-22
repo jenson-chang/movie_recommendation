@@ -95,3 +95,4 @@ aws.json
 environment.yml
 backend/model.pkl
 /infrastructure/.venv
+/model/data/ml-latest-small

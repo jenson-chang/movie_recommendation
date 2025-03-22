@@ -109,7 +109,8 @@ st.write("This app recommends movies based on your preferences.")
 user_id = st.number_input("Enter your user ID", min_value=1, max_value=610, value=1)
 
 if st.button("Get Recommendations"):
-    recommendations = get_recommendations(user_id)
+    # Convert user_id to string before sending to backend
+    recommendations = get_recommendations(str(user_id))
     
     if recommendations is None:
         st.error("Failed to get recommendations. Please try again.")
