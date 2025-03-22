@@ -17,8 +17,8 @@ try:
     # Try to get backend URL from environment variable (production)
     BACKEND_URL = os.environ["REACT_APP_API_URL"]
 except KeyError:
-    # Fall back to local development URL
-    BACKEND_URL = "http://localhost:8000"  # Local development URL
+    # Fall back to local Docker service name
+    BACKEND_URL = "http://backend:8000"
 
 # Add sidebar with product case study information
 st.sidebar.title("Product Case Study")

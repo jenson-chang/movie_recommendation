@@ -29,15 +29,9 @@ class FrontendStack(Stack):
         )
 
         # Create Secrets Manager secret for TMDB API key
-        tmdb_secret = secretsmanager.Secret(self, "TMDBAPISecret",
-            secret_name="movie-recommendation/tmdb-api-key",
-            description="TMDb API Key for movie recommendations",
-            generate_secret_string=secretsmanager.SecretStringGenerator(
-                secret_string_template='{"TMDB_API_KEY": ""}',
-                generate_string_key="TMDB_API_KEY",
-                exclude_punctuation=True,
-                password_length=32,
-            )
+        tmdb_secret = secretsmanager.Secret.from_secret_name_v2(
+            self, "TMDBAPISecret",
+            secret_name="movie-recommendation/tmdb-api-key"
         )
 
         # Get Docker image configuration from environment variables
