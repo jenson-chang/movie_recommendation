@@ -20,48 +20,6 @@ except KeyError:
     # Fall back to local Docker service name
     BACKEND_URL = "http://backend:8000"
 
-# Add sidebar with product case study information
-st.sidebar.title("Product Case Study")
-
-st.sidebar.header("Problem")
-st.sidebar.write("""
-- Users struggle to find movies they might enjoy in vast streaming catalogs
-- Traditional recommendation systems often lack personalization
-- Time wasted browsing through irrelevant content
-""")
-
-st.sidebar.header("Solution")
-st.sidebar.write("""
-- Personalized movie recommendation system
-- Leverages collaborative filtering to understand user preferences
-- Integration with TMDb API for rich movie metadata
-- User-friendly interface with visual movie posters and details
-""")
-
-st.sidebar.header("AI Model Used")
-st.sidebar.write("""
-- Collaborative Filtering using Matrix Factorization
-- Predicts user preferences based on historical ratings
-- Identifies patterns in user-movie interactions
-- Scalable solution that improves with more user data
-""")
-
-st.sidebar.header("Business Impact")
-st.sidebar.write("""
-- Increased user engagement and satisfaction
-- Reduced time-to-content for users
-- Better content discovery leading to higher watch time
-- Data-driven insights for content acquisition
-""")
-
-st.sidebar.header("Tech Stack")
-st.sidebar.write("""
-- **Frontend:** Streamlit for interactive UI
-- **Backend:** FastAPI for high-performance API
-- **Machine Learning:** scikit-surprise for collaborative filtering
-- **Infrastructure:** AWS CDK and ECS Fargate for scalable deployment
-""")
-
 def fetch_movie_details(movie_id):
     """
     Fetch movie details including poster path and genres from TMDb API.
@@ -102,14 +60,21 @@ def get_recommendations(user_id: int):
         st.error(f"Error connecting to backend: {str(e)}")
         return None
 
+# Main content area
 st.title("Movie Recommendation System")
 
-st.write("This app recommends movies based on your preferences using both content-based and collaborative filtering approaches.")
+# Initialize session state for first load
+if 'first_load' not in st.session_state:
+    st.session_state.first_load = True
 
-user_id = st.number_input("Enter your user ID", min_value=1, max_value=610, value=1)
+# Add user input section to sidebar
+st.sidebar.write("This app recommends movies based on your preferences using both content-based and collaborative filtering approaches.")
 
-if st.button("Get Recommendations"):
+user_id = st.sidebar.number_input("Enter a user ID to see their recommendations (1 to 610)", min_value=1, max_value=610, value=1)
+
+if st.sidebar.button("Get Recommendations"):
     # Convert user_id to string before sending to backend
+    st.session_state.first_load = False  # Update first load state
     recommendations = get_recommendations(str(user_id))
     
     if recommendations is None:
@@ -118,16 +83,16 @@ if st.button("Get Recommendations"):
         if not recommendations['content_based'] and not recommendations['collaborative']:
             st.warning(f"No recommendations found for user ID {user_id}")
         else:
-            # Display Content-Based Recommendations
-            if recommendations['content_based']:
-                st.write("### Because you've watched...")
-                num_cols = min(5, len(recommendations['content_based']))
-                cols = st.columns([1] * num_cols)
+            # Display Top Rated Movies
+            if recommendations['top_rated']:
+                st.write("### Your Top Rated")
+                with st.expander("Learn more about your top rated movies"):
+                    st.write("These are the movies you've rated highest in your viewing history. They help us understand your preferences and generate personalized recommendations.")
                 
-                for idx, rec in enumerate(recommendations['content_based'][:num_cols]):
-                    movie_details = fetch_movie_details(rec['movie_id'])
-                    
+                cols = st.columns(5)
+                for idx, rec in enumerate(recommendations['top_rated'][:5]):
                     with cols[idx]:
+                        movie_details = fetch_movie_details(rec['movie_id'])
                         if movie_details:
                             st.image(movie_details['poster_url'], caption=movie_details['title'])
                             if movie_details['genres']:
@@ -135,21 +100,69 @@ if st.button("Get Recommendations"):
                         else:
                             st.write(f"Movie ID: {rec['movie_id']}")
             
-            st.markdown("---")  # Add a separator between sections
+            st.markdown("---")  # Add separator
+            
+            # Display Content-Based Recommendations
+            if recommendations['content_based']:
+                st.write("### We Recommend")
+                with st.expander("Learn more about your recommendations"):
+                    st.write("These recommendations are generated using a supervised machine learning model called **content-based filtering**. It uses the metadata of the movies you've watched to generate recommendations for similar movies.")
+                cols = st.columns(5)
+                for idx, rec in enumerate(recommendations['content_based'][:5]):
+                    with cols[idx]:
+                        movie_details = fetch_movie_details(rec['movie_id'])
+                        if movie_details:
+                            st.image(movie_details['poster_url'], caption=movie_details['title'])
+                            if movie_details['genres']:
+                                st.write("**Genres:** " + ", ".join(movie_details['genres']))
+                        else:
+                            st.write(f"Movie ID: {rec['movie_id']}")
+            
+            st.markdown("---")  # Add separator
             
             # Display Collaborative Filtering Recommendations
             if recommendations['collaborative']:
-                st.write("### Others are watching...")
-                num_cols = min(5, len(recommendations['collaborative']))
-                cols = st.columns([1] * num_cols)
-                
-                for idx, rec in enumerate(recommendations['collaborative'][:num_cols]):
-                    movie_details = fetch_movie_details(rec['movie_id'])
-                    
+                st.write("### Others Are Watching")
+                with st.expander("Learn more about what others are watching"):
+                    st.write("These recommendations are generated using a unsupervised machine learning model called **collaborative filtering**. It identifies other user-movie interactions similar to yours and uses them to generate recommendations for movies you might like.")
+                cols = st.columns(5)
+                for idx, rec in enumerate(recommendations['collaborative'][:5]):
                     with cols[idx]:
+                        movie_details = fetch_movie_details(rec['movie_id'])
                         if movie_details:
                             st.image(movie_details['poster_url'], caption=movie_details['title'])
                             if movie_details['genres']:
                                 st.write("**Genres:** " + ", ".join(movie_details['genres']))
                         else:
                             st.write(f"Movie ID: {rec['movie_id']}")
+
+# Display welcome message only if first_load is True and no recommendations have been shown
+if st.session_state.first_load:
+    st.markdown("""
+    <div>
+        <h2>Welcome! 👋 </h2>
+        <p style='font-size: 1.2rem;'>Select a user ID on the left to start getting personalized movie recommendations.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.sidebar.markdown("---")  # Add separator
+
+with st.sidebar.expander("Technical Details"):
+    st.header("Machine Learning Models Used")
+    st.write("""
+    - **Content-Based Filtering:**
+      - Uses movie metadata (genres) to create feature vectors for each movie
+      - Recommends movies with similar features
+
+    - **Collaborative Filtering:**
+      - Identifies patterns in user preferences via matrix factorization of user-movie ratings
+      - Recommends movies based on other users with similar preferences
+    """)
+
+    st.header("Tech Stack")
+    st.write("""
+    - **Frontend:** Streamlit for interactive UI
+    - **Backend:** FastAPI for high-performance API
+    - **Machine Learning:** scikit-learn for content-based filtering and scikit-surprise for collaborative filtering
+    - **Infrastructure:** Written using AWS CDK and deployed on AWS ECS Fargate
+    """)

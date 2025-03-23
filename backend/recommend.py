@@ -19,16 +19,20 @@ def load_model_data():
     
     collab_predictions_df = pd.read_parquet(os.path.join(models_dir, 'collab_predictions.parquet'))
     content_predictions_df = pd.read_parquet(os.path.join(models_dir, 'content_predictions.parquet'))
+    current_ratings_df = pd.read_parquet(os.path.join(models_dir, 'current_ratings.parquet'))
     
     # Convert IDs to strings
     collab_predictions_df['movie_id'] = collab_predictions_df['movie_id'].astype(str)
     collab_predictions_df['user_id'] = collab_predictions_df['user_id'].astype(str)
     content_predictions_df['movie_id'] = content_predictions_df['movie_id'].astype(str)
     content_predictions_df['user_id'] = content_predictions_df['user_id'].astype(str)
+    current_ratings_df['movie_id'] = current_ratings_df['movie_id'].astype(str)
+    current_ratings_df['user_id'] = current_ratings_df['user_id'].astype(str)
     
     return {
         'collab_predictions_df': collab_predictions_df,
-        'content_predictions_df': content_predictions_df
+        'content_predictions_df': content_predictions_df,
+        'current_ratings_df': current_ratings_df
     }
 
 def get_user_content_recommendations(user_id, model_data, n=10):
@@ -62,6 +66,24 @@ def get_user_collab_recommendations(user_id, model_data, n=5):
     top_predictions = user_predictions.nlargest(n, 'rating')
     
     return top_predictions[['movie_id']]
+
+def get_user_top_rated_movies(user_id, model_data, n=5):
+    """
+    Get the top n highest rated movies for a given user from their current ratings.
+    """
+    # Get ratings for the user
+    user_ratings = model_data['current_ratings_df'][
+        model_data['current_ratings_df']['user_id'] == str(user_id)
+    ]
+    
+    if user_ratings.empty:
+        print("No ratings found for user")
+        return pd.DataFrame(columns=['movie_id'])
+    
+    # Sort by rating and get top n movies
+    top_rated = user_ratings.nlargest(n, 'rating')
+    
+    return top_rated[['movie_id']]
 
 def get_hybrid_recommendations(user_id, n=5):
     """

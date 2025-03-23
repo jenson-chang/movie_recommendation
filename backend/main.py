@@ -3,7 +3,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
-from recommend import get_hybrid_recommendations
+from recommend import get_hybrid_recommendations, get_user_top_rated_movies, load_model_data
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -30,23 +30,30 @@ app.add_middleware(
 @app.get("/recommendations/{user_id}")
 async def get_recommendations(user_id: str, n: int = 5):
     """
-    Get movie recommendations for a specific user from both content-based and collaborative filtering models.
+    Get movie recommendations for a specific user from both content-based and collaborative filtering models,
+    along with their top rated movies.
     
     Args:
         user_id (str): The user ID to get recommendations for
         n (int): Number of recommendations to return from each model (default: 5)
         
     Returns:
-        dict: Dictionary containing recommendations from both models
+        dict: Dictionary containing recommendations from both models and top rated movies
     """
     try:
+        # Load model data
+        model_data = load_model_data()
+        
         # Get recommendations from both models
         recommendations = get_hybrid_recommendations(user_id, n=n)
         
-        if recommendations['content_based'].empty and recommendations['collaborative'].empty:
+        # Get top rated movies
+        top_rated = get_user_top_rated_movies(user_id, model_data, n=n)
+        
+        if recommendations['content_based'].empty and recommendations['collaborative'].empty and top_rated.empty:
             raise HTTPException(
                 status_code=404,
-                detail=f"No recommendations found for user {user_id}"
+                detail=f"No recommendations or ratings found for user {user_id}"
             )
             
         # Format the response
@@ -59,6 +66,10 @@ async def get_recommendations(user_id: str, n: int = 5):
             "collaborative": [
                 {"movie_id": str(movie_id)}
                 for movie_id in recommendations['collaborative']['movie_id']
+            ],
+            "top_rated": [
+                {"movie_id": str(movie_id)}
+                for movie_id in top_rated['movie_id']
             ]
         }
         
