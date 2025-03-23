@@ -36,7 +36,7 @@ class BackendStack(Stack):
             self, "MovieRecommendationBackendService",
             cluster=cluster,
             cpu=int(os.getenv("BACKEND_CPU", "256")),
-            memory_limit_mib=int(os.getenv("BACKEND_MEMORY", "512")),
+            memory_limit_mib=int(os.getenv("BACKEND_MEMORY", "2048")),
             desired_count=int(os.getenv("DESIRED_COUNT", "2")),
             task_image_options=ecs_patterns.ApplicationLoadBalancedTaskImageOptions(
                 image=ecs.ContainerImage.from_registry(backend_image),

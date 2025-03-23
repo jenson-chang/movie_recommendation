@@ -7,7 +7,7 @@ from recommend import get_hybrid_recommendations, get_user_top_rated_movies, loa
 
 # Configure logging
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,  # Set to INFO level to hide debug messages
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     force=True  # Force reconfiguration of the root logger
 )
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 # Add a stream handler to ensure logs go to stdout/stderr
 stream_handler = logging.StreamHandler()
-stream_handler.setLevel(logging.DEBUG)
+stream_handler.setLevel(logging.INFO)  # Set handler level to INFO to hide debug messages
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
@@ -71,8 +71,8 @@ async def get_recommendations(user_id: str, n: int = 5):
                 detail="Model data not loaded. Service is initializing."
             )
         
-        # Get recommendations from both models
-        recommendations = get_hybrid_recommendations(user_id, n=n)
+        # Get recommendations from both models using cached data
+        recommendations = get_hybrid_recommendations(user_id, model_data=cached_model_data, n=n)
         
         # Get top rated movies
         top_rated = get_user_top_rated_movies(user_id, cached_model_data, n=n)
