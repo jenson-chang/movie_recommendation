@@ -2,17 +2,17 @@ import requests
 import streamlit as st
 import os
 
-# Health check endpoint
-if st.experimental_get_query_params().get("health") == ["check"]:
-    st.write({"status": "healthy"})
-    st.stop()
-
 # Set page to wide mode and configure initial page settings
 st.set_page_config(
     layout="wide",
     page_title="Movie Recommendation System",
     initial_sidebar_state="expanded"
 )
+
+# Health check endpoint
+if st.query_params.get("health") == ["check"]:
+    st.write({"status": "healthy"})
+    st.stop()
 
 # Custom CSS to increase text size and improve readability
 st.markdown("""
