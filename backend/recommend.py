@@ -4,6 +4,7 @@ import os
 import logging
 import time
 from typing import Optional
+import pyarrow.parquet as pq
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -34,11 +35,17 @@ def load_parquet_with_retry(file_path: str, max_retries: int = 3, chunk_size: Op
     for attempt in range(max_retries):
         try:
             if chunk_size:
-                # Read the file in chunks
+                # Read the file in chunks using pyarrow
+                table = pq.read_table(file_path)
+                num_rows = len(table)
                 chunks = []
-                for chunk in pd.read_parquet(file_path, columns=None).iter_chunks(chunk_size):
-                    chunk_df = pd.DataFrame(chunk)
+                
+                for start in range(0, num_rows, chunk_size):
+                    end = min(start + chunk_size, num_rows)
+                    chunk = table.slice(start, end - start)
+                    chunk_df = chunk.to_pandas()
                     chunks.append(chunk_df)
+                
                 return pd.concat(chunks, ignore_index=True)
             else:
                 return pd.read_parquet(file_path)
