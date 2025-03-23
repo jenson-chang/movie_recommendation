@@ -26,33 +26,50 @@ def load_model_data():
     models_dir = os.path.join(project_root, 'models')
     logger.debug(f"Loading models from directory: {models_dir}")
     
+    model_data = {}
+    
+    # Load collaborative predictions
     try:
-        collab_predictions_df = pd.read_parquet(os.path.join(models_dir, 'collab_predictions.parquet'))
-        content_predictions_df = pd.read_parquet(os.path.join(models_dir, 'content_predictions.parquet'))
-        current_ratings_df = pd.read_parquet(os.path.join(models_dir, 'current_ratings.parquet'))
-        
+        collab_path = os.path.join(models_dir, 'collab_predictions.parquet')
+        collab_predictions_df = pd.read_parquet(collab_path)
         logger.debug(f"Loaded collaborative predictions with shape: {collab_predictions_df.shape}")
-        logger.debug(f"Loaded content predictions with shape: {content_predictions_df.shape}")
-        logger.debug(f"Loaded current ratings with shape: {current_ratings_df.shape}")
-        
-        # Convert IDs to strings
-        collab_predictions_df['movie_id'] = collab_predictions_df['movie_id'].astype(str)
-        collab_predictions_df['user_id'] = collab_predictions_df['user_id'].astype(str)
-        content_predictions_df['movie_id'] = content_predictions_df['movie_id'].astype(str)
-        content_predictions_df['user_id'] = content_predictions_df['user_id'].astype(str)
-        current_ratings_df['movie_id'] = current_ratings_df['movie_id'].astype(str)
-        current_ratings_df['user_id'] = current_ratings_df['user_id'].astype(str)
-        
-        logger.debug("Successfully converted all IDs to strings")
-        
-        return {
-            'collab_predictions_df': collab_predictions_df,
-            'content_predictions_df': content_predictions_df,
-            'current_ratings_df': current_ratings_df
-        }
+        model_data['collab_predictions_df'] = collab_predictions_df
     except Exception as e:
-        logger.error(f"Error loading model data: {str(e)}")
+        logger.error(f"Failed to load collaborative predictions from {collab_path}: {str(e)}")
         raise
+
+    # Load content predictions
+    try:
+        content_path = os.path.join(models_dir, 'content_predictions.parquet')
+        content_predictions_df = pd.read_parquet(content_path)
+        logger.debug(f"Loaded content predictions with shape: {content_predictions_df.shape}")
+        model_data['content_predictions_df'] = content_predictions_df
+    except Exception as e:
+        logger.error(f"Failed to load content predictions from {content_path}: {str(e)}")
+        raise
+
+    # Load current ratings
+    try:
+        ratings_path = os.path.join(models_dir, 'current_ratings.parquet')
+        current_ratings_df = pd.read_parquet(ratings_path)
+        logger.debug(f"Loaded current ratings with shape: {current_ratings_df.shape}")
+        model_data['current_ratings_df'] = current_ratings_df
+    except Exception as e:
+        logger.error(f"Failed to load current ratings from {ratings_path}: {str(e)}")
+        raise
+    
+    # Convert IDs to strings
+    try:
+        for df_name in ['collab_predictions_df', 'content_predictions_df', 'current_ratings_df']:
+            df = model_data[df_name]
+            df['movie_id'] = df['movie_id'].astype(str)
+            df['user_id'] = df['user_id'].astype(str)
+        logger.debug("Successfully converted all IDs to strings")
+    except Exception as e:
+        logger.error(f"Failed to convert IDs to strings: {str(e)}")
+        raise
+    
+    return model_data
 
 def get_user_content_recommendations(user_id, model_data, n=10):
     """Get content-based recommendations for a user"""
