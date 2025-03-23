@@ -91,6 +91,7 @@ docker-compose.override.yml
 .aws/
 aws.json
 
+.streamlit/
 environment.yml
 backend/model.pkl
 /infrastructure/.venv

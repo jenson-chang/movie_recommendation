@@ -40,7 +40,7 @@ class FrontendStack(Stack):
         frontend_image = f"{docker_registry}:{frontend_tag}"
 
         # Create Fargate Service
-        self.fargate_service = ecs_patterns.ApplicationLoadBalancedFargateService(
+        fargate_service = ecs_patterns.ApplicationLoadBalancedFargateService(
             self, "MovieRecommendationFrontendService",
             cluster=cluster,
             cpu=int(os.getenv("FRONTEND_CPU", "256")),
@@ -63,10 +63,10 @@ class FrontendStack(Stack):
         )
 
         # Grant the task role permission to access the secret
-        tmdb_secret.grant_read(self.fargate_service.task_definition.task_role)
+        tmdb_secret.grant_read(fargate_service.task_definition.task_role)
 
         # Add auto scaling
-        scaling = self.fargate_service.service.auto_scale_task_count(
+        scaling = fargate_service.service.auto_scale_task_count(
             max_capacity=int(os.getenv("MAX_CAPACITY", "4")),
             min_capacity=int(os.getenv("MIN_CAPACITY", "1"))
         )
@@ -87,6 +87,6 @@ class FrontendStack(Stack):
 
         # Output the ALB DNS name
         CfnOutput(self, "FrontendLoadBalancerDNS",
-            value=self.fargate_service.load_balancer.load_balancer_dns_name,
+            value=fargate_service.load_balancer.load_balancer_dns_name,
             description="Frontend Load Balancer DNS Name"
-        )
+        ) 
