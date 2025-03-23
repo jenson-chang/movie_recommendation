@@ -1,6 +1,16 @@
 # Movie Recommendation System
+This system provides personalized movie recommendations based on user preferences and viewing history. It features a modern web interface, scalable backend API, and cloud-native infrastructure deployment.
 
-A full-stack movie recommendation system built with FastAPI, Streamlit, and AWS CDK for infrastructure deployment.
+## Features
+
+- 🎬 Movie recommendations using collaborative filtering and content-based filtering
+- 🌐 Modern, responsive web interface with Streamlit
+- 🔒 Secure API endpoints with FastAPI
+- 🚀 Cloud-native deployment on AWS
+- 📊 Interactive data visualization
+- 🔄 Auto-scaling infrastructure
+- 🛡️ Secure VPC architecture
+- 📝 Comprehensive logging and monitoring
 
 ## Architecture
 
@@ -63,18 +73,41 @@ Get personalized movie recommendations for a user.
 ```
 movie_recommendation/
 ├── backend/               # FastAPI backend service
-├── frontend/              # Streamlit frontend application
-├── infrastructure/        # AWS CDK infrastructure code
-│   ├── stacks/            # CDK stack definitions
-│   ├── app.py             # CDK app entry point
-│   └── requirements.txt   # Python dependencies
-├── scripts/               # Deployment and utility scripts
-├── .env                   # Environment variables
-└── docker-compose.yml     # Local development setup
+│   ├── app/              # Application code
+│   ├── Dockerfile        # Container definition
+│   └── requirements.txt  # Python dependencies
+├── frontend/             # Streamlit frontend application
+│   ├── src/              # Source code
+│   ├── Dockerfile        # Container definition
+│   └── requirements.txt  # Python dependencies
+├── infrastructure/       # AWS CDK infrastructure code
+│   ├── stacks/          # CDK stack definitions
+│   ├── app.py           # CDK app entry point
+│   └── requirements.txt # Python dependencies
+├── scripts/             # Deployment and utility scripts
+├── .env                 # Environment variables
+└── docker-compose.yml   # Local development setup
 ```
 
-## Environment Variables
+## Local Development
 
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/jenson-chang/movie_recommendation.git
+   cd movie_recommendation
+   ```
+
+2. Build and start the containers:
+   ```bash
+   docker-compose up --build
+   ```
+
+3. Access the applications:
+   - Frontend (Streamlit): http://localhost:8501
+   - Backend (FastAPI): http://localhost:8000
+   - API Documentation: http://localhost:8000/docs
+
+## Deployment
 Create a `.env` file in the root directory with the following variables:
 
 ```env
@@ -110,34 +143,23 @@ VPC_NAT_GATEWAYS=1
 HEALTH_CHECK_GRACE_PERIOD=60
 ```
 
-## Deployment
-
 1. Configure AWS credentials:
    ```bash
    aws configure
    ```
 
-2. Deploy the infrastructure:
+2. Deploy the infrastructure using AWS CDK:
    ```bash
-   ./scripts/deploy.sh
+   cd infrastructure
+   cdk deploy --all
    ```
 
-The script will:
-- Create necessary AWS resources
+This will:
+- Create the VPC and networking components
+- Deploy the ECS Fargate clusters
+- Set up the Application Load Balancers
 - Deploy the frontend and backend containers
-- Set up networking and security groups
-- Configure auto-scaling
-
-## Local Development
-
-1. Start the development environment:
-   ```bash
-   docker-compose up
-   ```
-
-2. Access the applications:
-   - Frontend (Streamlit): http://localhost:8501
-   - Backend (FastAPI): http://localhost:8000
+- Configure auto-scaling and monitoring
 
 ## Infrastructure Details
 
