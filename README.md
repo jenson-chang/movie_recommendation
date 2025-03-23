@@ -72,47 +72,47 @@ The system consists of three main components:
    - API Documentation: http://localhost:8000/docs
 
 ## Deployment
-Create a `.env` file in the root directory with the following variables:
+1. Create a `.env` file in the root directory with the following variables:
 
-```env
-# AWS Configuration
-AWS_PROFILE=your-profile
-CDK_DEFAULT_REGION=your-region
-CDK_DEFAULT_ACCOUNT=your-account-id
+   ```env
+   # AWS Configuration
+   AWS_PROFILE=your-profile
+   CDK_DEFAULT_REGION=your-region
+   CDK_DEFAULT_ACCOUNT=your-account-id
+   
+   # Application Configuration
+   APP_NAME=movie-recommendation
+   ENVIRONMENT=development
+   
+   # Container Configuration
+   FRONTEND_PORT=8501  # Default Streamlit port
+   BACKEND_PORT=8000
+   BACKEND_CPU=256
+   BACKEND_MEMORY=512
+   FRONTEND_CPU=256
+   FRONTEND_MEMORY=512
+   
+   # Scaling Configuration
+   MIN_CAPACITY=1
+   MAX_CAPACITY=4
+   DESIRED_COUNT=2
+   SCALE_THRESHOLD=70
+   SCALE_COOLDOWN=60
+   
+   # VPC Configuration
+   VPC_MAX_AZS=2
+   VPC_NAT_GATEWAYS=1
+   
+   # Health Check Configuration
+   HEALTH_CHECK_GRACE_PERIOD=60
+   ```
 
-# Application Configuration
-APP_NAME=movie-recommendation
-ENVIRONMENT=development
-
-# Container Configuration
-FRONTEND_PORT=8501  # Default Streamlit port
-BACKEND_PORT=8000
-BACKEND_CPU=256
-BACKEND_MEMORY=512
-FRONTEND_CPU=256
-FRONTEND_MEMORY=512
-
-# Scaling Configuration
-MIN_CAPACITY=1
-MAX_CAPACITY=4
-DESIRED_COUNT=2
-SCALE_THRESHOLD=70
-SCALE_COOLDOWN=60
-
-# VPC Configuration
-VPC_MAX_AZS=2
-VPC_NAT_GATEWAYS=1
-
-# Health Check Configuration
-HEALTH_CHECK_GRACE_PERIOD=60
-```
-
-1. Configure AWS credentials:
+2. Configure AWS credentials:
    ```bash
    aws configure
    ```
 
-2. Deploy the infrastructure using AWS CDK:
+3. Deploy the infrastructure using AWS CDK:
    ```bash
    cd infrastructure
    cdk deploy --all
