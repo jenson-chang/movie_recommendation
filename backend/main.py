@@ -3,39 +3,17 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
-import numpy as np
+from recommend import get_hybrid_recommendations
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Global variables to store model data
-predictions = None
-user_id_to_indices = None
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Load model data on startup and cleanup on shutdown."""
-    global predictions, user_id_to_indices
-    
-    model_path = 'models/model.npz'
-    if not os.path.exists(model_path):
-        logger.error(f"Model file not found at {model_path}")
-        raise RuntimeError(f"Model file not found at {model_path}")
-        
-    try:
-        logger.info(f"Loading model from: {model_path}")
-        loaded_data = np.load(model_path, allow_pickle=True)
-        predictions = loaded_data['predictions']
-        user_id_to_indices = loaded_data['user_id_to_indices'].item()
-        logger.info("Successfully loaded model data")
-    except Exception as e:
-        logger.error(f"Error loading model data: {e}")
-        raise RuntimeError(f"Failed to load model data: {str(e)}")
-    
+    """Initialize the application."""
+    logger.info("Starting up...")
     yield
-    
-    # Cleanup (if needed) happens after the yield
     logger.info("Shutting down...")
 
 app = FastAPI(lifespan=lifespan)
@@ -49,76 +27,42 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def get_user_predictions(user_id, top_n=10):
-    """
-    Get top N predictions for a specific user.
-    
-    Args:
-        user_id (str): The user ID to get predictions for
-        top_n (int): Number of top predictions to return
-        
-    Returns:
-        list: List of tuples (movie_id, estimated_rating) sorted by rating
-    """
-    try:
-        # Convert user_id to string for lookup (model was trained with string IDs)
-        user_id = str(user_id)
-        
-        # Get predictions for user
-        if user_id not in user_id_to_indices:
-            logger.warning(f"No predictions found for user {user_id}")
-            return []
-            
-        indices = user_id_to_indices[user_id]
-        user_predictions = predictions[indices]
-        
-        # Convert predictions to list of (movie_id, rating) tuples
-        prediction_tuples = [(pred[1], pred[2]) for pred in user_predictions]
-        
-        # Sort by rating and get top N
-        sorted_predictions = sorted(prediction_tuples, key=lambda x: x[1], reverse=True)[:top_n]
-        
-        return sorted_predictions
-        
-    except Exception as e:
-        logger.error(f"Error getting predictions for user {user_id}: {e}")
-        raise
-
 @app.get("/recommendations/{user_id}")
-async def get_recommendations(user_id: str, top_n: int = 5):
+async def get_recommendations(user_id: str, n: int = 5):
     """
-    Get movie recommendations for a specific user.
+    Get movie recommendations for a specific user from both content-based and collaborative filtering models.
     
     Args:
         user_id (str): The user ID to get recommendations for
-        top_n (int): Number of recommendations to return (default: 5)
+        n (int): Number of recommendations to return from each model (default: 5)
         
     Returns:
-        dict: Dictionary containing recommendations
+        dict: Dictionary containing recommendations from both models
     """
     try:
-        # Get predictions using the new function
-        predictions = get_user_predictions(user_id, top_n)
+        # Get recommendations from both models
+        recommendations = get_hybrid_recommendations(user_id, n=n)
         
-        if not predictions:
+        if recommendations['content_based'].empty and recommendations['collaborative'].empty:
             raise HTTPException(
                 status_code=404,
                 detail=f"No recommendations found for user {user_id}"
             )
             
         # Format the response
-        recommendations = [
-            {
-                "movie_id": movie_id,
-                "estimated_rating": float(rating)
-            }
-            for movie_id, rating in predictions
-        ]
-        
-        return {
+        formatted_recommendations = {
             "user_id": user_id,
-            "recommendations": recommendations
+            "content_based": [
+                {"movie_id": str(movie_id)}
+                for movie_id in recommendations['content_based']['movie_id']
+            ],
+            "collaborative": [
+                {"movie_id": str(movie_id)}
+                for movie_id in recommendations['collaborative']['movie_id']
+            ]
         }
+        
+        return formatted_recommendations
         
     except Exception as e:
         logger.error(f"Error getting recommendations for user {user_id}: {e}")

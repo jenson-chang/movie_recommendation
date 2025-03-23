@@ -94,17 +94,17 @@ def get_recommendations(user_id: int):
     Get movie recommendations from the backend API.
     """
     try:
-        response = requests.get(f"{BACKEND_URL}/recommendations/{user_id}?top_n=5")
+        response = requests.get(f"{BACKEND_URL}/recommendations/{user_id}?n=5")
         response.raise_for_status()
         data = response.json()
-        return data["recommendations"]
+        return data
     except requests.exceptions.RequestException as e:
         st.error(f"Error connecting to backend: {str(e)}")
         return None
 
 st.title("Movie Recommendation System")
 
-st.write("This app recommends movies based on your preferences.")
+st.write("This app recommends movies based on your preferences using both content-based and collaborative filtering approaches.")
 
 user_id = st.number_input("Enter your user ID", min_value=1, max_value=610, value=1)
 
@@ -115,24 +115,41 @@ if st.button("Get Recommendations"):
     if recommendations is None:
         st.error("Failed to get recommendations. Please try again.")
     else:
-        if not recommendations:
+        if not recommendations['content_based'] and not recommendations['collaborative']:
             st.warning(f"No recommendations found for user ID {user_id}")
         else:
-            st.write("### Top Movie Recommendations")
-            
-            # Create dynamic columns based on number of recommendations
-            num_cols = min(5, len(recommendations))  # Limit to 5 columns max
-            cols = st.columns([1] * num_cols)
-            
-            for idx, rec in enumerate(recommendations[:num_cols]):
-                movie_details = fetch_movie_details(rec['movie_id'])
+            # Display Content-Based Recommendations
+            if recommendations['content_based']:
+                st.write("### Because you've watched...")
+                num_cols = min(5, len(recommendations['content_based']))
+                cols = st.columns([1] * num_cols)
                 
-                with cols[idx]:
-                    if movie_details:
-                        st.image(movie_details['poster_url'], caption=movie_details['title'])
-                        st.write(f"**Rating:** {rec['estimated_rating']:.2f}")
-                        if movie_details['genres']:
-                            st.write("**Genres:** " + ", ".join(movie_details['genres']))
-                    else:
-                        st.write(f"Movie ID: {rec['movie_id']}")
-                        st.write(f"Rating: {rec['estimated_rating']:.2f}")
+                for idx, rec in enumerate(recommendations['content_based'][:num_cols]):
+                    movie_details = fetch_movie_details(rec['movie_id'])
+                    
+                    with cols[idx]:
+                        if movie_details:
+                            st.image(movie_details['poster_url'], caption=movie_details['title'])
+                            if movie_details['genres']:
+                                st.write("**Genres:** " + ", ".join(movie_details['genres']))
+                        else:
+                            st.write(f"Movie ID: {rec['movie_id']}")
+            
+            st.markdown("---")  # Add a separator between sections
+            
+            # Display Collaborative Filtering Recommendations
+            if recommendations['collaborative']:
+                st.write("### Others are watching...")
+                num_cols = min(5, len(recommendations['collaborative']))
+                cols = st.columns([1] * num_cols)
+                
+                for idx, rec in enumerate(recommendations['collaborative'][:num_cols]):
+                    movie_details = fetch_movie_details(rec['movie_id'])
+                    
+                    with cols[idx]:
+                        if movie_details:
+                            st.image(movie_details['poster_url'], caption=movie_details['title'])
+                            if movie_details['genres']:
+                                st.write("**Genres:** " + ", ".join(movie_details['genres']))
+                        else:
+                            st.write(f"Movie ID: {rec['movie_id']}")
