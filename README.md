@@ -1,3 +1,10 @@
+[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.68.0+-green.svg)](https://fastapi.tiangolo.com/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-1.0.0+-red.svg)](https://streamlit.io/)
+[![AWS](https://img.shields.io/badge/AWS-CDK-blue.svg)](https://aws.amazon.com/cdk/)
+[![Docker Image CI](https://github.com/jenson-chang/movie_recommendation/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/jenson-chang/movie_recommendation/actions/workflows/docker-publish.yml)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 # Movie Recommendation System
 This system provides personalized movie recommendations based on user preferences and viewing history. It features a modern web interface, scalable backend API, and cloud-native infrastructure deployment.
 
