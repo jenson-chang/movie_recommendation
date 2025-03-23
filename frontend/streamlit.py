@@ -2,6 +2,43 @@ import requests
 import streamlit as st
 import os
 
+# Set page to wide mode and configure initial page settings
+st.set_page_config(
+    layout="wide",
+    page_title="Movie Recommendation System",
+    initial_sidebar_state="expanded"
+)
+
+# Custom CSS to increase text size and improve readability
+st.markdown("""
+    <style>
+    .stMarkdown {
+        font-size: 1.2rem;
+    }
+    .stButton>button {
+        font-size: 1.2rem;
+        transition: all 0.3s ease;
+    }
+    .stButton>button:hover {
+        background-color: #00bcd4 !important;
+        color: white !important;
+        border-color: #00bcd4 !important;
+    }
+    .stNumberInput>div>div>input {
+        font-size: 1.2rem;
+    }
+    h1 {
+        font-size: 2.5rem !important;
+    }
+    h2 {
+        font-size: 2rem !important;
+    }
+    h3 {
+        font-size: 1.8rem !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 # TMDb API configuration
 try:
     # Try to get API key from environment variable (production)
@@ -60,16 +97,16 @@ def get_recommendations(user_id: int):
         st.error(f"Error connecting to backend: {str(e)}")
         return None
 
-# Main content area
-st.title("Movie Recommendation System")
-
 # Initialize session state for first load
 if 'first_load' not in st.session_state:
     st.session_state.first_load = True
 
-# Add user input section to sidebar
-st.sidebar.write("This app recommends movies based on your preferences using both content-based and collaborative filtering approaches.")
+# Main content area
+st.sidebar.title("MOVIE RECOMMENDATION")
 
+st.sidebar.markdown("---")  # Add separator
+
+# Add user input section to sidebar
 user_id = st.sidebar.number_input("Enter a user ID to see their recommendations (1 to 610)", min_value=1, max_value=610, value=1)
 
 if st.sidebar.button("Get Recommendations"):
@@ -86,7 +123,7 @@ if st.sidebar.button("Get Recommendations"):
             # Display Top Rated Movies
             if recommendations['top_rated']:
                 st.write("### Your Top Rated")
-                with st.expander("Learn more about your top rated movies"):
+                with st.expander("*Learn more about your top rated movies*"):
                     st.write("These are the movies you've rated highest in your viewing history. They help us understand your preferences and generate personalized recommendations.")
                 
                 cols = st.columns(5)
@@ -105,7 +142,7 @@ if st.sidebar.button("Get Recommendations"):
             # Display Content-Based Recommendations
             if recommendations['content_based']:
                 st.write("### We Recommend")
-                with st.expander("Learn more about your recommendations"):
+                with st.expander("*Learn more about your recommendations*"):
                     st.write("These recommendations are generated using a supervised machine learning model called **content-based filtering**. It uses the metadata of the movies you've watched to generate recommendations for similar movies.")
                 cols = st.columns(5)
                 for idx, rec in enumerate(recommendations['content_based'][:5]):
@@ -123,7 +160,7 @@ if st.sidebar.button("Get Recommendations"):
             # Display Collaborative Filtering Recommendations
             if recommendations['collaborative']:
                 st.write("### Others Are Watching")
-                with st.expander("Learn more about what others are watching"):
+                with st.expander("*Learn more about what others are watching*"):
                     st.write("These recommendations are generated using a unsupervised machine learning model called **collaborative filtering**. It identifies other user-movie interactions similar to yours and uses them to generate recommendations for movies you might like.")
                 cols = st.columns(5)
                 for idx, rec in enumerate(recommendations['collaborative'][:5]):
@@ -147,8 +184,8 @@ if st.session_state.first_load:
 
 st.sidebar.markdown("---")  # Add separator
 
-with st.sidebar.expander("Technical Details"):
-    st.header("Machine Learning Models Used")
+with st.sidebar.expander("*Technical Details*"):
+    st.write("#### Machine Learning Models")
     st.write("""
     - **Content-Based Filtering:**
       - Uses movie metadata (genres) to create feature vectors for each movie
@@ -159,7 +196,7 @@ with st.sidebar.expander("Technical Details"):
       - Recommends movies based on other users with similar preferences
     """)
 
-    st.header("Tech Stack")
+    st.write("#### Tech Stack")
     st.write("""
     - **Frontend:** Streamlit for interactive UI
     - **Backend:** FastAPI for high-performance API
