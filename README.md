@@ -46,27 +46,6 @@ The system consists of three main components:
 - Docker installed locally (for development)
 - Node.js and npm (for CDK)
 
-## Project Structure
-
-```
-movie_recommendation/
-├── backend/               # FastAPI backend service
-│   ├── app/              # Application code
-│   ├── Dockerfile        # Container definition
-│   └── requirements.txt  # Python dependencies
-├── frontend/             # Streamlit frontend application
-│   ├── src/              # Source code
-│   ├── Dockerfile        # Container definition
-│   └── requirements.txt  # Python dependencies
-├── infrastructure/       # AWS CDK infrastructure code
-│   ├── stacks/          # CDK stack definitions
-│   ├── app.py           # CDK app entry point
-│   └── requirements.txt # Python dependencies
-├── scripts/             # Deployment and utility scripts
-├── .env                 # Environment variables
-└── docker-compose.yml   # Local development setup
-```
-
 ## Local Development
 
 1. Clone the repository:
