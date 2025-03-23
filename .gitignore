@@ -91,8 +91,8 @@ docker-compose.override.yml
 .aws/
 aws.json
 
-.streamlit/
 environment.yml
 backend/model.pkl
 /infrastructure/.venv
 /model/data/ml-latest-small
+frontend/.streamlit/secrets.toml

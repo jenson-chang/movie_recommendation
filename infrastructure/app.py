@@ -2,6 +2,7 @@
 import aws_cdk as cdk
 from stacks.backend_stack import BackendStack
 from stacks.frontend_stack import FrontendStack
+from stacks.monitoring_stack import MonitoringStack
 import os
 from dotenv import load_dotenv
 
@@ -19,7 +20,7 @@ backend_stack = BackendStack(app, "MovieRecommendationBackendStack",
 )
 
 # Create the frontend stack
-FrontendStack(app, "MovieRecommendationFrontendStack",
+frontend_stack = FrontendStack(app, "MovieRecommendationFrontendStack",
     backend_alb_dns=backend_stack.backend_alb_dns,  # Pass the backend ALB DNS name
     env=cdk.Environment(
         account=os.getenv("CDK_DEFAULT_ACCOUNT"),
@@ -27,4 +28,14 @@ FrontendStack(app, "MovieRecommendationFrontendStack",
     )
 )
 
-app.synth() 
+# Create the monitoring stack
+MonitoringStack(app, "MovieRecommendationMonitoringStack",
+    backend_service=backend_stack.fargate_service.service,
+    frontend_service=frontend_stack.fargate_service.service,
+    env=cdk.Environment(
+        account=os.getenv("CDK_DEFAULT_ACCOUNT"),
+        region=os.getenv("CDK_DEFAULT_REGION")
+    )
+)
+
+app.synth()

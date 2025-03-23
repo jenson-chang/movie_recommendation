@@ -32,7 +32,7 @@ class BackendStack(Stack):
         backend_image = f"{docker_registry}:{backend_tag}"
 
         # Create Fargate Service
-        fargate_service = ecs_patterns.ApplicationLoadBalancedFargateService(
+        self.fargate_service = ecs_patterns.ApplicationLoadBalancedFargateService(
             self, "MovieRecommendationService",
             cluster=cluster,
             cpu=int(os.getenv("BACKEND_CPU", "256")),
@@ -49,7 +49,7 @@ class BackendStack(Stack):
         )
 
         # Add auto scaling
-        scaling = fargate_service.service.auto_scale_task_count(
+        scaling = self.fargate_service.service.auto_scale_task_count(
             max_capacity=int(os.getenv("MAX_CAPACITY", "4")),
             min_capacity=int(os.getenv("MIN_CAPACITY", "1"))
         )
@@ -61,8 +61,8 @@ class BackendStack(Stack):
         )
 
         # Output the ALB DNS name
-        self.backend_alb_dns = fargate_service.load_balancer.load_balancer_dns_name
+        self.backend_alb_dns = self.fargate_service.load_balancer.load_balancer_dns_name
         CfnOutput(self, "BackendLoadBalancerDNS",
             value=self.backend_alb_dns,
             description="Backend Load Balancer DNS Name"
-        ) 
+        )
