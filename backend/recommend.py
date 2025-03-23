@@ -31,9 +31,11 @@ def load_model_data():
     # Load collaborative predictions
     try:
         collab_path = os.path.join(models_dir, 'collab_predictions.parquet')
+        logger.info(f"Attempting to load collaborative predictions from {collab_path}")
         collab_predictions_df = pd.read_parquet(collab_path)
-        logger.debug(f"Loaded collaborative predictions with shape: {collab_predictions_df.shape}")
+        logger.info(f"Successfully loaded collaborative predictions with shape: {collab_predictions_df.shape}")
         model_data['collab_predictions_df'] = collab_predictions_df
+        logger.info("Collaborative predictions loaded and stored in model_data")
     except Exception as e:
         logger.error(f"Failed to load collaborative predictions from {collab_path}: {str(e)}")
         raise
@@ -41,9 +43,11 @@ def load_model_data():
     # Load content predictions
     try:
         content_path = os.path.join(models_dir, 'content_predictions.parquet')
+        logger.info(f"Attempting to load content predictions from {content_path}")
         content_predictions_df = pd.read_parquet(content_path)
-        logger.debug(f"Loaded content predictions with shape: {content_predictions_df.shape}")
+        logger.info(f"Successfully loaded content predictions with shape: {content_predictions_df.shape}")
         model_data['content_predictions_df'] = content_predictions_df
+        logger.info("Content predictions loaded and stored in model_data")
     except Exception as e:
         logger.error(f"Failed to load content predictions from {content_path}: {str(e)}")
         raise
@@ -51,24 +55,29 @@ def load_model_data():
     # Load current ratings
     try:
         ratings_path = os.path.join(models_dir, 'current_ratings.parquet')
+        logger.info(f"Attempting to load current ratings from {ratings_path}")
         current_ratings_df = pd.read_parquet(ratings_path)
-        logger.debug(f"Loaded current ratings with shape: {current_ratings_df.shape}")
+        logger.info(f"Successfully loaded current ratings with shape: {current_ratings_df.shape}")
         model_data['current_ratings_df'] = current_ratings_df
+        logger.info("Current ratings loaded and stored in model_data")
     except Exception as e:
         logger.error(f"Failed to load current ratings from {ratings_path}: {str(e)}")
         raise
     
     # Convert IDs to strings
     try:
+        logger.info("Starting ID conversion to strings")
         for df_name in ['collab_predictions_df', 'content_predictions_df', 'current_ratings_df']:
+            logger.info(f"Converting IDs to strings for {df_name}")
             df = model_data[df_name]
             df['movie_id'] = df['movie_id'].astype(str)
             df['user_id'] = df['user_id'].astype(str)
-        logger.debug("Successfully converted all IDs to strings")
+        logger.info("Successfully converted all IDs to strings")
     except Exception as e:
         logger.error(f"Failed to convert IDs to strings: {str(e)}")
         raise
     
+    logger.info("All model data successfully loaded and processed")
     return model_data
 
 def get_user_content_recommendations(user_id, model_data, n=10):
