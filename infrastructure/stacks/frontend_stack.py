@@ -13,11 +13,17 @@ from constructs import Construct
 import os
 
 class FrontendStack(Stack):
-    def __init__(self, scope: Construct, construct_id: str, backend_stack, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, backend_stack: Stack, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        # Use the backend's VPC
-        vpc = backend_stack.vpc
+        # Get the backend ALB DNS name from the backend stack
+        backend_alb_dns = backend_stack.backend_alb_dns
+
+        # Create VPC (reuse the same VPC as backend if needed)
+        vpc = ec2.Vpc(self, "MovieRecommendationFrontendVPC",
+            max_azs=int(os.getenv("VPC_MAX_AZS", "2")),
+            nat_gateways=int(os.getenv("VPC_NAT_GATEWAYS", "1"))
+        )
 
         # Create ECS Cluster
         cluster = ecs.Cluster(self, "MovieRecommendationFrontendCluster",
@@ -48,7 +54,7 @@ class FrontendStack(Stack):
                 container_port=int(os.getenv("FRONTEND_PORT", "8501")),
                 environment={
                     "AWS_REGION": os.getenv("CDK_DEFAULT_REGION"),
-                    "REACT_APP_API_URL": f"http://{backend_stack.backend_alb_dns}",  # Use backend ALB DNS name
+                    "REACT_APP_API_URL": f"http://{backend_alb_dns}",  # Use backend ALB DNS name
                 },
                 secrets={
                     "TMDB_API_KEY": ecs.Secret.from_secrets_manager(tmdb_secret, field="TMDB_API_KEY")
@@ -57,7 +63,6 @@ class FrontendStack(Stack):
             public_load_balancer=True,  # Make the ALB public-facing
             assign_public_ip=True,  # Allow tasks to have public IPs
             health_check_grace_period=Duration.seconds(int(os.getenv("HEALTH_CHECK_GRACE_PERIOD", "60"))),
-            health_check_path="/?health=check",  # Add health check path
         )
 
         # Grant the task role permission to access the secret

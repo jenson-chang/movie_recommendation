@@ -33,7 +33,7 @@ class BackendStack(Stack):
 
         # Create Fargate Service
         fargate_service = ecs_patterns.ApplicationLoadBalancedFargateService(
-            self, "MovieRecommendationService",
+            self, "MovieRecommendationBackendService",
             cluster=cluster,
             cpu=int(os.getenv("BACKEND_CPU", "256")),
             memory_limit_mib=int(os.getenv("BACKEND_MEMORY", "512")),
@@ -43,9 +43,20 @@ class BackendStack(Stack):
                 container_port=int(os.getenv("BACKEND_PORT", "8000")),
                 environment={
                     "AWS_REGION": os.getenv("CDK_DEFAULT_REGION"),
-                    "MODEL_PATH": os.getenv("MODEL_PATH", "models/preprocessed_model.pkl"),
                 }
-            )
+            ),
+            public_load_balancer=True,
+            assign_public_ip=True,
+            health_check_grace_period=Duration.seconds(int(os.getenv("HEALTH_CHECK_GRACE_PERIOD", "60"))),
+        )
+
+        # Store the ALB DNS name as a property
+        self.backend_alb_dns = fargate_service.load_balancer.load_balancer_dns_name
+
+        # Output the ALB DNS name
+        CfnOutput(self, "BackendLoadBalancerDNS",
+            value=self.backend_alb_dns,
+            description="Backend Load Balancer DNS Name"
         )
 
         # Add auto scaling
@@ -58,11 +69,4 @@ class BackendStack(Stack):
             target_utilization_percent=int(os.getenv("SCALE_THRESHOLD", "70")),
             scale_in_cooldown=Duration.seconds(int(os.getenv("SCALE_COOLDOWN", "60"))),
             scale_out_cooldown=Duration.seconds(int(os.getenv("SCALE_COOLDOWN", "60")))
-        )
-
-        # Output the ALB DNS name
-        self.backend_alb_dns = fargate_service.load_balancer.load_balancer_dns_name
-        CfnOutput(self, "BackendLoadBalancerDNS",
-            value=self.backend_alb_dns,
-            description="Backend Load Balancer DNS Name"
         ) 
