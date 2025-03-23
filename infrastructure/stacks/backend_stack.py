@@ -15,14 +15,14 @@ class BackendStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         # Create VPC
-        vpc = ec2.Vpc(self, "MovieRecommendationVPC",
+        self.vpc = ec2.Vpc(self, "MovieRecommendationVPC",
             max_azs=int(os.getenv("VPC_MAX_AZS", "2")),
             nat_gateways=int(os.getenv("VPC_NAT_GATEWAYS", "1"))
         )
 
         # Create ECS Cluster
         cluster = ecs.Cluster(self, "MovieRecommendationCluster",
-            vpc=vpc,
+            vpc=self.vpc,
             container_insights=True
         )
 

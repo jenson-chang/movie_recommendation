@@ -85,7 +85,7 @@ The system consists of three main components:
    ENVIRONMENT=development
    
    # Container Configuration
-   FRONTEND_PORT=8501  # Default Streamlit port
+   FRONTEND_PORT=8501
    BACKEND_PORT=8000
    BACKEND_CPU=256
    BACKEND_MEMORY=512

@@ -93,6 +93,11 @@ async def get_recommendations(user_id: str, n: int = 5):
             detail=f"Error getting recommendations: {str(e)}"
         )
 
+@app.get("/")
+async def root():
+    """Root endpoint for ALB health checks."""
+    return {"status": "ok"}
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""

@@ -29,7 +29,7 @@ jobs:
           images: jensonchang/movies
           tags: |
             type=raw,value=frontend-latest
-
+            type=raw,value={{sha}},enable=${{github.ref_type != 'tag'}}
       - name: Build and push frontend image
         uses: docker/build-push-action@v6
         with:
@@ -46,6 +46,7 @@ jobs:
           images: jensonchang/movies
           tags: |
             type=raw,value=backend-latest
+            type=raw,value={{sha}},enable=${{github.ref_type != 'tag'}}
 
       - name: Build and push backend image
         uses: docker/build-push-action@v6

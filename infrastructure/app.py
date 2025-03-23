@@ -18,13 +18,16 @@ backend_stack = BackendStack(app, "MovieRecommendationBackendStack",
     )
 )
 
-# Create the frontend stack
-FrontendStack(app, "MovieRecommendationFrontendStack",
-    backend_alb_dns=backend_stack.backend_alb_dns,  # Pass the backend ALB DNS name
+# Create the frontend stack with explicit dependency on backend stack
+frontend_stack = FrontendStack(app, "MovieRecommendationFrontendStack",
+    backend_stack=backend_stack,  # Pass the entire backend stack
     env=cdk.Environment(
         account=os.getenv("CDK_DEFAULT_ACCOUNT"),
         region=os.getenv("CDK_DEFAULT_REGION")
     )
 )
+
+# Add explicit dependency
+frontend_stack.add_dependency(backend_stack)
 
 app.synth() 
