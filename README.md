@@ -26,7 +26,7 @@ The system consists of three main components:
 2. **Backend (FastAPI)**
    - API for movie recommendations
    - Single endpoint for personalized recommendations
-   - Collaborative filtering model
+   - Collaborative filtering and content-based filtering model
    - Docker containerized application
    - Deployed on AWS ECS Fargate
    - Internal VPC with Application Load Balancer
@@ -37,28 +37,6 @@ The system consists of three main components:
    - VPC with public and private subnets
    - Auto-scaling configuration
    - Application Load Balancers
-
-## API Endpoints
-
-### POST /predict/
-Get personalized movie recommendations for a user.
-
-**Request Body:**
-```json
-{
-    "user_id": 123
-}
-```
-
-**Response:**
-```json
-{
-    "recommendations": [
-        [movie_id, score],
-        ...
-    ]
-}
-```
 
 ## Prerequisites
 
