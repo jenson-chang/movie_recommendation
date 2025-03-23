@@ -20,12 +20,25 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
+# Global variable to store cached model data
+cached_model_data = None
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize the application."""
+    global cached_model_data
     logger.info("Starting up...")
+    try:
+        logger.info("Loading model data during startup...")
+        cached_model_data = load_model_data()
+        logger.info("Successfully loaded and cached model data")
+    except Exception as e:
+        logger.error(f"Failed to load model data during startup: {e}")
+        raise
     yield
     logger.info("Shutting down...")
+    # Clear the cached data
+    cached_model_data = None
 
 app = FastAPI(lifespan=lifespan)
 
@@ -52,14 +65,17 @@ async def get_recommendations(user_id: str, n: int = 5):
         dict: Dictionary containing recommendations from both models and top rated movies
     """
     try:
-        # Load model data
-        model_data = load_model_data()
+        if cached_model_data is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Model data not loaded. Service is initializing."
+            )
         
         # Get recommendations from both models
         recommendations = get_hybrid_recommendations(user_id, n=n)
         
         # Get top rated movies
-        top_rated = get_user_top_rated_movies(user_id, model_data, n=n)
+        top_rated = get_user_top_rated_movies(user_id, cached_model_data, n=n)
         
         if recommendations['content_based'].empty and recommendations['collaborative'].empty and top_rated.empty:
             raise HTTPException(
@@ -101,4 +117,6 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
+    if cached_model_data is None:
+        return {"status": "initializing"}
     return {"status": "healthy"}
