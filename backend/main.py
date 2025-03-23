@@ -8,9 +8,17 @@ from recommend import get_hybrid_recommendations, get_user_top_rated_movies, loa
 # Configure logging
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    force=True  # Force reconfiguration of the root logger
 )
 logger = logging.getLogger(__name__)
+
+# Add a stream handler to ensure logs go to stdout/stderr
+stream_handler = logging.StreamHandler()
+stream_handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+stream_handler.setFormatter(formatter)
+logger.addHandler(stream_handler)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
