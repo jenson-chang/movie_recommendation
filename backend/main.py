@@ -6,7 +6,10 @@ import logging
 from recommend import get_hybrid_recommendations, get_user_top_rated_movies, load_model_data
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
