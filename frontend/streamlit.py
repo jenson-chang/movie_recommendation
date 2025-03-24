@@ -102,9 +102,15 @@ def get_recommendations(user_id: int):
         st.error(f"Error connecting to backend: {str(e)}")
         return None
 
-# Initialize session state for first load
+# Initialize session state for first load and user ID
 if 'first_load' not in st.session_state:
     st.session_state.first_load = True
+if 'user_id' not in st.session_state:
+    st.session_state.user_id = 1
+if 'recommendations' not in st.session_state:
+    st.session_state.recommendations = None
+if 'input_user_id' not in st.session_state:
+    st.session_state.input_user_id = 1
 
 # Main content area
 st.sidebar.title("MOVIE RECOMMENDATION")
@@ -112,71 +118,82 @@ st.sidebar.title("MOVIE RECOMMENDATION")
 st.sidebar.markdown("---")  # Add separator
 
 # Add user input section to sidebar
-user_id = st.sidebar.number_input("Enter a user ID to see their recommendations (1 to 610)", min_value=1, max_value=610, value=1)
+input_user_id = st.sidebar.number_input(
+    "Enter a user ID to see their recommendations (1 to 610)", 
+    min_value=1, 
+    max_value=610, 
+    value=st.session_state.input_user_id,
+    key="user_id_input"
+)
+
+# Update input_user_id in session state when the input changes
+st.session_state.input_user_id = input_user_id
 
 if st.sidebar.button("Get Recommendations"):
-    # Convert user_id to string before sending to backend
+    # Update the session state user ID only when button is clicked
+    st.session_state.user_id = st.session_state.input_user_id
     st.session_state.first_load = False  # Update first load state
-    recommendations = get_recommendations(str(user_id))
+    st.session_state.recommendations = get_recommendations(str(st.session_state.user_id))
+
+# Display recommendations from session state if available
+if st.session_state.recommendations is not None:
+    recommendations = st.session_state.recommendations
     
-    if recommendations is None:
-        st.error("Failed to get recommendations. Please try again.")
+    if not recommendations['content_based'] and not recommendations['collaborative']:
+        st.warning(f"No recommendations found for user ID {st.session_state.user_id}")
     else:
-        if not recommendations['content_based'] and not recommendations['collaborative']:
-            st.warning(f"No recommendations found for user ID {user_id}")
-        else:
-            # Display Top Rated Movies
-            if recommendations['top_rated']:
-                st.write("### Your Top Rated")
-                with st.expander("*Learn more about your top rated movies*"):
-                    st.write("These are the movies you've rated highest in your viewing history. They help us understand your preferences and generate personalized recommendations.")
-                
-                cols = st.columns(5)
-                for idx, rec in enumerate(recommendations['top_rated'][:5]):
-                    with cols[idx]:
-                        movie_details = fetch_movie_details(rec['movie_id'])
-                        if movie_details:
-                            st.image(movie_details['poster_url'], caption=movie_details['title'])
-                            if movie_details['genres']:
-                                st.write("**Genres:** " + ", ".join(movie_details['genres']))
-                        else:
-                            st.write(f"Movie ID: {rec['movie_id']}")
+        # Display Top Rated Movies
+        if recommendations['top_rated']:
+            st.write("### Your Top Rated")
+            with st.expander("*Learn more about your top rated movies*"):
+                st.write("These are the movies you've rated highest in your viewing history. They help us understand your preferences and generate personalized recommendations.")
             
-            st.markdown("---")  # Add separator
-            
-            # Display Content-Based Recommendations
-            if recommendations['content_based']:
-                st.write("### We Recommend")
-                with st.expander("*Learn more about your recommendations*"):
-                    st.write("These recommendations are generated using a supervised machine learning model called **content-based filtering**. It uses the metadata of the movies you've watched to generate recommendations for similar movies.")
-                cols = st.columns(5)
-                for idx, rec in enumerate(recommendations['content_based'][:5]):
-                    with cols[idx]:
-                        movie_details = fetch_movie_details(rec['movie_id'])
-                        if movie_details:
-                            st.image(movie_details['poster_url'], caption=movie_details['title'])
-                            if movie_details['genres']:
-                                st.write("**Genres:** " + ", ".join(movie_details['genres']))
-                        else:
-                            st.write(f"Movie ID: {rec['movie_id']}")
-            
-            st.markdown("---")  # Add separator
-            
-            # Display Collaborative Filtering Recommendations
-            if recommendations['collaborative']:
-                st.write("### Others Are Watching")
-                with st.expander("*Learn more about what others are watching*"):
-                    st.write("These recommendations are generated using a unsupervised machine learning model called **collaborative filtering**. It identifies other user-movie interactions similar to yours and uses them to generate recommendations for movies you might like.")
-                cols = st.columns(5)
-                for idx, rec in enumerate(recommendations['collaborative'][:5]):
-                    with cols[idx]:
-                        movie_details = fetch_movie_details(rec['movie_id'])
-                        if movie_details:
-                            st.image(movie_details['poster_url'], caption=movie_details['title'])
-                            if movie_details['genres']:
-                                st.write("**Genres:** " + ", ".join(movie_details['genres']))
-                        else:
-                            st.write(f"Movie ID: {rec['movie_id']}")
+            cols = st.columns(5)
+            for idx, rec in enumerate(recommendations['top_rated'][:5]):
+                with cols[idx]:
+                    movie_details = fetch_movie_details(rec['movie_id'])
+                    if movie_details:
+                        st.image(movie_details['poster_url'], caption=movie_details['title'])
+                        if movie_details['genres']:
+                            st.write("**Genres:** " + ", ".join(movie_details['genres']))
+                    else:
+                        st.write(f"Movie ID: {rec['movie_id']}")
+        
+        st.markdown("---")  # Add separator
+        
+        # Display Content-Based Recommendations
+        if recommendations['content_based']:
+            st.write("### We Recommend")
+            with st.expander("*Learn more about your recommendations*"):
+                st.write("These recommendations are generated using a supervised machine learning model called **content-based filtering**. It uses the metadata of the movies you've watched to generate recommendations for similar movies.")
+            cols = st.columns(5)
+            for idx, rec in enumerate(recommendations['content_based'][:5]):
+                with cols[idx]:
+                    movie_details = fetch_movie_details(rec['movie_id'])
+                    if movie_details:
+                        st.image(movie_details['poster_url'], caption=movie_details['title'])
+                        if movie_details['genres']:
+                            st.write("**Genres:** " + ", ".join(movie_details['genres']))
+                    else:
+                        st.write(f"Movie ID: {rec['movie_id']}")
+        
+        st.markdown("---")  # Add separator
+        
+        # Display Collaborative Filtering Recommendations
+        if recommendations['collaborative']:
+            st.write("### Others Are Watching")
+            with st.expander("*Learn more about what others are watching*"):
+                st.write("These recommendations are generated using a unsupervised machine learning model called **collaborative filtering**. It identifies other user-movie interactions similar to yours and uses them to generate recommendations for movies you might like.")
+            cols = st.columns(5)
+            for idx, rec in enumerate(recommendations['collaborative'][:5]):
+                with cols[idx]:
+                    movie_details = fetch_movie_details(rec['movie_id'])
+                    if movie_details:
+                        st.image(movie_details['poster_url'], caption=movie_details['title'])
+                        if movie_details['genres']:
+                            st.write("**Genres:** " + ", ".join(movie_details['genres']))
+                    else:
+                        st.write(f"Movie ID: {rec['movie_id']}")
 
 # Display welcome message only if first_load is True and no recommendations have been shown
 if st.session_state.first_load:
