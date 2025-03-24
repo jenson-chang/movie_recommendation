@@ -2,10 +2,16 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.68.0+-green.svg)](https://fastapi.tiangolo.com/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.0.0+-red.svg)](https://streamlit.io/)
 [![AWS](https://img.shields.io/badge/AWS-CDK-blue.svg)](https://aws.amazon.com/cdk/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![AWS ECS](https://img.shields.io/badge/AWS-ECS-orange.svg)](https://aws.amazon.com/ecs/)
+[![AWS Fargate](https://img.shields.io/badge/AWS-Fargate-orange.svg)](https://aws.amazon.com/fargate/)
+[![AWS VPC](https://img.shields.io/badge/AWS-VPC-orange.svg)](https://aws.amazon.com/vpc/)
+[![AWS ALB](https://img.shields.io/badge/AWS-ALB-orange.svg)](https://aws.amazon.com/elasticloadbalancing/)
+[![Docker](https://img.shields.io/badge/Docker-Container-blue.svg)](https://www.docker.com/)
 
 # Movie Recommendation System
 This system provides personalized movie recommendations based on user preferences and viewing history. It features a modern web interface, scalable backend API, and cloud-native infrastructure deployment.
+
+<img width="800" alt="example" src="https://github.com/user-attachments/assets/b0540281-7047-4f84-b7c9-5383194e5283" />
 
 ## Features
 
