@@ -52,17 +52,21 @@ app.add_middleware(
 )
 
 @app.get("/recommendations/{user_id}")
-async def get_recommendations(user_id: str, n: int = 5):
+async def get_recommendations(user_id: str, n: int = 10, content_weight: float = 0.5):
     """
-    Get movie recommendations for a specific user from both content-based and collaborative filtering models,
+    Get hybrid movie recommendations for a specific user, combining content-based and collaborative filtering models,
     along with their top rated movies.
     
     Args:
         user_id (str): The user ID to get recommendations for
-        n (int): Number of recommendations to return from each model (default: 5)
+        n (int): Number of recommendations to return (default: 10)
+        content_weight (float): Weight for content-based recommendations (0 to 1, default: 0.5)
+                              - 1.0: Only content-based
+                              - 0.0: Only collaborative
+                              - 0.5: Equal mix
         
     Returns:
-        dict: Dictionary containing recommendations from both models and top rated movies
+        dict: Dictionary containing hybrid recommendations and top rated movies
     """
     try:
         if cached_model_data is None:
@@ -71,13 +75,18 @@ async def get_recommendations(user_id: str, n: int = 5):
                 detail="Model data not loaded. Service is initializing."
             )
         
-        # Get recommendations from both models using cached data
-        recommendations = get_hybrid_recommendations(user_id, model_data=cached_model_data, n=n)
+        # Get hybrid recommendations using cached data
+        recommendations = get_hybrid_recommendations(
+            user_id, 
+            model_data=cached_model_data, 
+            n=n,
+            content_weight=content_weight
+        )
         
         # Get top rated movies
         top_rated = get_user_top_rated_movies(user_id, cached_model_data, n=n)
         
-        if recommendations['content_based'].empty and recommendations['collaborative'].empty and top_rated.empty:
+        if recommendations.empty and top_rated.empty:
             raise HTTPException(
                 status_code=404,
                 detail=f"No recommendations or ratings found for user {user_id}"
@@ -86,13 +95,9 @@ async def get_recommendations(user_id: str, n: int = 5):
         # Format the response
         formatted_recommendations = {
             "user_id": user_id,
-            "content_based": [
+            "recommendations": [
                 {"movie_id": str(movie_id)}
-                for movie_id in recommendations['content_based']['movie_id']
-            ],
-            "collaborative": [
-                {"movie_id": str(movie_id)}
-                for movie_id in recommendations['collaborative']['movie_id']
+                for movie_id in recommendations['movie_id']
             ],
             "top_rated": [
                 {"movie_id": str(movie_id)}

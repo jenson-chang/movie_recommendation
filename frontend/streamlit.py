@@ -9,6 +9,18 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Add GitHub link to top right
+st.markdown("""
+    <div style='position: fixed; top: 20px; right: 20px; z-index: 1000; background-color: rgba(0, 0, 0, 0.7); padding: 8px 16px; border-radius: 8px;'>
+        <a href='https://github.com/jenson-chang/movie_recommendation' target='_blank' style='text-decoration: none; color: #ffffff; display: flex; align-items: center; gap: 8px; font-weight: 500;'>
+            <svg height="24" width="24" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"></path>
+            </svg>
+            <span style='font-size: 1rem;'>View on GitHub</span>
+        </a>
+    </div>
+""", unsafe_allow_html=True)
+
 # Health check endpoint
 if st.query_params.get("health") == ["check"]:
     st.write({"status": "healthy"})
@@ -131,7 +143,7 @@ def get_recommendations(user_id: int):
     Get movie recommendations from the backend API.
     """
     try:
-        response = requests.get(f"{BACKEND_URL}/recommendations/{user_id}?n=10")
+        response = requests.get(f"{BACKEND_URL}/recommendations/{user_id}?n=20")
         response.raise_for_status()
         data = response.json()
         return data
@@ -172,11 +184,17 @@ if st.sidebar.button("Get Recommendations"):
     st.session_state.first_load = False  # Update first load state
     st.session_state.recommendations = get_recommendations(str(st.session_state.user_id))
 
+st.sidebar.markdown("""
+    <div style='font-size: 0.9rem; color: #888888; margin-bottom: 1rem;'>
+        Trained on 9,000 movies rated by 600 users (data up to 2018)
+    </div>
+""", unsafe_allow_html=True)
+
 # Display recommendations from session state if available
 if st.session_state.recommendations is not None:
     recommendations = st.session_state.recommendations
     
-    if not recommendations['content_based'] and not recommendations['collaborative']:
+    if not recommendations['recommendations'] and not recommendations['top_rated']:
         st.warning(f"No recommendations found for user ID {st.session_state.user_id}")
     else:
         # Display Top Rated Movies
@@ -202,39 +220,25 @@ if st.session_state.recommendations is not None:
         
         st.markdown("---")  # Add separator
         
-        # Display Content-Based Recommendations
-        if recommendations['content_based']:
-            st.write("### **We Recommend**")
+        # Display Combined Recommendations
+        if recommendations['recommendations']:
+            st.write("### **Recommended for You**")
             with st.expander("*Learn more about your recommendations*"):
-                st.write("These recommendations are generated using a supervised machine learning model called **content-based filtering**. It uses the metadata of the movies you've watched to generate recommendations for similar movies.")
+                st.write("""
+                These recommendations are generated using a hybrid approach that combines two powerful machine learning models:
+                
+                - **Content-Based Filtering:** Uses movie metadata (genres) to create feature vectors and recommend similar movies
+                - **Collaborative Filtering:** Identifies patterns in user preferences via matrix factorization of user-movie ratings
+                
+                The final recommendations are weighted combinations of both approaches to give you the best of both worlds!
+                """)
+            
             cols = st.columns(5)
             valid_poster_count = 0
-            for idx, rec in enumerate(recommendations['content_based']):
-                if valid_poster_count >= 5:
+            for idx, rec in enumerate(recommendations['recommendations']):
+                if valid_poster_count >= 10:
                     break
-                with cols[valid_poster_count]:
-                    movie_details = fetch_movie_details(rec['movie_id'])
-                    if movie_details and movie_details['poster_url']:
-                        st.image(movie_details['poster_url'], caption=movie_details['title'])
-                        if movie_details['genres']:
-                            st.write("**Genres:** " + ", ".join(movie_details['genres']))
-                        valid_poster_count += 1
-                    else:
-                        continue
-        
-        st.markdown("---")  # Add separator
-        
-        # Display Collaborative Filtering Recommendations
-        if recommendations['collaborative']:
-            st.write("### **Others Are Watching**")
-            with st.expander("*Learn more about what others are watching*"):
-                st.write("These recommendations are generated using a unsupervised machine learning model called **collaborative filtering**. It identifies other user-movie interactions similar to yours and uses them to generate recommendations for movies you might like.")
-            cols = st.columns(5)
-            valid_poster_count = 0
-            for idx, rec in enumerate(recommendations['collaborative']):
-                if valid_poster_count >= 5:
-                    break
-                with cols[valid_poster_count]:
+                with cols[valid_poster_count % 5]:
                     movie_details = fetch_movie_details(rec['movie_id'])
                     if movie_details and movie_details['poster_url']:
                         st.image(movie_details['poster_url'], caption=movie_details['title'])

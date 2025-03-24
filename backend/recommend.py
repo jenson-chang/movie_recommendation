@@ -229,7 +229,7 @@ def get_user_top_rated_movies(user_id, model_data, n=5):
     return top_rated
 
 @timing_decorator
-def get_hybrid_recommendations(user_id, model_data=None, n=5):
+def get_recommendations(user_id, model_data=None, n=5):
     """
     Get top recommendations from both content-based and collaborative filtering models.
     Returns top 5 recommendations from each model separately.
@@ -267,3 +267,83 @@ def get_hybrid_recommendations(user_id, model_data=None, n=5):
             'content_based': pd.DataFrame(columns=['movie_id']),
             'collaborative': pd.DataFrame(columns=['movie_id'])
         }
+
+@timing_decorator
+def get_hybrid_recommendations(user_id, model_data=None, n=10, content_weight=0.5):
+    """
+    Get hybrid recommendations by combining content-based and collaborative filtering models.
+    Uses a weight parameter to control the influence of each model.
+    
+    Args:
+        user_id: The user ID to get recommendations for
+        model_data: Optional pre-loaded model data. If None, will load data
+        n: Number of final recommendations to return
+        content_weight: Weight for content-based recommendations (0 to 1)
+                       - 1.0: Only content-based
+                       - 0.0: Only collaborative
+                       - 0.5: Equal mix (default)
+    
+    Returns:
+        pd.DataFrame: Combined recommendations with weighted scores
+    """
+    try:
+        # Load model data only if not provided (outside timing)
+        if model_data is None:
+            logger.info("No cached model data provided, loading fresh data...")
+            model_data = load_model_data()
+        else:
+            logger.info("Using cached model data for hybrid recommendations")
+        
+        # Get recommendations from both models
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            content_future = executor.submit(get_user_content_recommendations, user_id, model_data, n)
+            collab_future = executor.submit(get_user_collab_recommendations, user_id, model_data, n)
+            
+            # Get results
+            content_recs = content_future.result()
+            collab_recs = collab_future.result()
+        
+        # If either model returned no recommendations, return empty DataFrame
+        if content_recs.empty and collab_recs.empty:
+            logger.warning(f"No recommendations found for user {user_id}")
+            return pd.DataFrame(columns=['movie_id', 'score'])
+        
+        # Combine recommendations
+        combined_recs = pd.DataFrame()
+        
+        # Process content-based recommendations
+        if not content_recs.empty:
+            # Get the full predictions for the user to access ratings
+            user_content_predictions = model_data['content_predictions_df'].loc[str(user_id)]
+            content_recs = content_recs.merge(
+                user_content_predictions[['movie_id', 'rating']],
+                on='movie_id',
+                how='left'
+            )
+            content_recs['score'] = content_recs['rating'] * content_weight
+            combined_recs = pd.concat([combined_recs, content_recs])
+        
+        # Process collaborative recommendations
+        if not collab_recs.empty:
+            # Get the full predictions for the user to access ratings
+            user_collab_predictions = model_data['collab_predictions_df'].loc[str(user_id)]
+            collab_recs = collab_recs.merge(
+                user_collab_predictions[['movie_id', 'rating']],
+                on='movie_id',
+                how='left'
+            )
+            collab_recs['score'] = collab_recs['rating'] * (1 - content_weight)
+            combined_recs = pd.concat([combined_recs, collab_recs])
+        
+        # Group by movie_id and sum the scores
+        combined_recs = combined_recs.groupby('movie_id')['score'].sum().reset_index()
+        
+        # Get top N recommendations
+        top_recs = combined_recs.nlargest(n, 'score')[['movie_id']]
+        
+        logger.info(f"Generated {len(top_recs)} hybrid recommendations for user {user_id}")
+        return top_recs
+        
+    except Exception as e:
+        logger.error(f"Error in hybrid recommendations for user {user_id}: {str(e)}")
+        return pd.DataFrame(columns=['movie_id'])
