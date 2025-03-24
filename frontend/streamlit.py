@@ -32,14 +32,49 @@ st.markdown("""
     .stNumberInput>div>div>input {
         font-size: 1.2rem;
     }
+    /* Add hover effect for movie poster containers */
+    .stImage {
+        transition: all 0.3s ease;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+    }
+    .stImage:hover {
+        transform: scale(1.1);
+        cursor: pointer;
+        z-index: 1;
+    }
     h1 {
         font-size: 2.5rem !important;
+        font-weight: 700 !important;
+        color: #ffffff !important;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3) !important;
+        margin-bottom: 1.5rem !important;
     }
     h2 {
         font-size: 2rem !important;
+        font-weight: 600 !important;
+        color: #ffffff !important;
+        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2) !important;
+        margin-bottom: 1.2rem !important;
     }
     h3 {
         font-size: 1.8rem !important;
+        font-weight: 500 !important;
+        color: #ffffff !important;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2) !important;
+        margin-bottom: 1rem !important;
+    }
+    .sidebar .sidebar-content {
+        background-color: #1e1e1e !important;
+    }
+    .sidebar .sidebar-content h1 {
+        color: #00bcd4 !important;
+        text-shadow: none !important;
+    }
+    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+        padding-top: 1rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding-bottom: 0.5rem;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -144,7 +179,7 @@ if st.session_state.recommendations is not None:
     else:
         # Display Top Rated Movies
         if recommendations['top_rated']:
-            st.write("### Your Top Rated")
+            st.write("### **Your Top Rated**")
             with st.expander("*Learn more about your top rated movies*"):
                 st.write("These are the movies you've rated highest in your viewing history. They help us understand your preferences and generate personalized recommendations.")
             
@@ -163,7 +198,7 @@ if st.session_state.recommendations is not None:
         
         # Display Content-Based Recommendations
         if recommendations['content_based']:
-            st.write("### We Recommend")
+            st.write("### **We Recommend**")
             with st.expander("*Learn more about your recommendations*"):
                 st.write("These recommendations are generated using a supervised machine learning model called **content-based filtering**. It uses the metadata of the movies you've watched to generate recommendations for similar movies.")
             cols = st.columns(5)
@@ -181,7 +216,7 @@ if st.session_state.recommendations is not None:
         
         # Display Collaborative Filtering Recommendations
         if recommendations['collaborative']:
-            st.write("### Others Are Watching")
+            st.write("### **Others Are Watching**")
             with st.expander("*Learn more about what others are watching*"):
                 st.write("These recommendations are generated using a unsupervised machine learning model called **collaborative filtering**. It identifies other user-movie interactions similar to yours and uses them to generate recommendations for movies you might like.")
             cols = st.columns(5)

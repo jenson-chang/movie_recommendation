@@ -97,3 +97,5 @@ backend/model.pkl
 /model/data/ml-latest-small
 frontend/.streamlit/secrets.toml
 model/data/ml-latest-small.zip
+model/data/ml-latest.zip
+/model/data/ml-latest
