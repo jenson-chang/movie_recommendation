@@ -11,6 +11,8 @@
 # Movie Recommendation System
 This system provides personalized movie recommendations based on user preferences and viewing history. It features a modern web interface, scalable backend API, and cloud-native infrastructure deployment.
 
+<img width="800" alt="example" src="https://github.com/user-attachments/assets/b0540281-7047-4f84-b7c9-5383194e5283" />
+
 ## Features
 
 - 🎬 Movie recommendations using collaborative filtering and content-based filtering
