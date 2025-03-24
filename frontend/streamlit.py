@@ -100,8 +100,11 @@ except KeyError:
 def fetch_movie_details(movie_id):
     """
     Fetch movie details including poster path and genres from TMDb API.
+    Returns None if movie details cannot be fetched.
     """
     try:
+        # Convert movie_id to integer, handling string with decimal point
+        movie_id = int(float(str(movie_id)))
         # First, search for the movie by ID
         search_url = f"{TMDB_BASE_URL}/movie/{movie_id}"
         response = requests.get(search_url, params={
@@ -120,16 +123,15 @@ def fetch_movie_details(movie_id):
                 'genres': genres
             }
         return None
-    except Exception as e:
-        st.error(f"Error fetching movie details: {str(e)}")
-        return None
+    except Exception:
+        return None  # Silently return None for any error
 
 def get_recommendations(user_id: int):
     """
     Get movie recommendations from the backend API.
     """
     try:
-        response = requests.get(f"{BACKEND_URL}/recommendations/{user_id}?n=5")
+        response = requests.get(f"{BACKEND_URL}/recommendations/{user_id}?n=10")
         response.raise_for_status()
         data = response.json()
         return data
@@ -184,15 +186,19 @@ if st.session_state.recommendations is not None:
                 st.write("These are the movies you've rated highest in your viewing history. They help us understand your preferences and generate personalized recommendations.")
             
             cols = st.columns(5)
-            for idx, rec in enumerate(recommendations['top_rated'][:5]):
-                with cols[idx]:
+            valid_poster_count = 0
+            for idx, rec in enumerate(recommendations['top_rated']):
+                if valid_poster_count >= 5:
+                    break
+                with cols[valid_poster_count]:
                     movie_details = fetch_movie_details(rec['movie_id'])
-                    if movie_details:
+                    if movie_details and movie_details['poster_url']:
                         st.image(movie_details['poster_url'], caption=movie_details['title'])
                         if movie_details['genres']:
                             st.write("**Genres:** " + ", ".join(movie_details['genres']))
+                        valid_poster_count += 1
                     else:
-                        st.write(f"Movie ID: {rec['movie_id']}")
+                        continue
         
         st.markdown("---")  # Add separator
         
@@ -202,15 +208,19 @@ if st.session_state.recommendations is not None:
             with st.expander("*Learn more about your recommendations*"):
                 st.write("These recommendations are generated using a supervised machine learning model called **content-based filtering**. It uses the metadata of the movies you've watched to generate recommendations for similar movies.")
             cols = st.columns(5)
-            for idx, rec in enumerate(recommendations['content_based'][:5]):
-                with cols[idx]:
+            valid_poster_count = 0
+            for idx, rec in enumerate(recommendations['content_based']):
+                if valid_poster_count >= 5:
+                    break
+                with cols[valid_poster_count]:
                     movie_details = fetch_movie_details(rec['movie_id'])
-                    if movie_details:
+                    if movie_details and movie_details['poster_url']:
                         st.image(movie_details['poster_url'], caption=movie_details['title'])
                         if movie_details['genres']:
                             st.write("**Genres:** " + ", ".join(movie_details['genres']))
+                        valid_poster_count += 1
                     else:
-                        st.write(f"Movie ID: {rec['movie_id']}")
+                        continue
         
         st.markdown("---")  # Add separator
         
@@ -220,15 +230,19 @@ if st.session_state.recommendations is not None:
             with st.expander("*Learn more about what others are watching*"):
                 st.write("These recommendations are generated using a unsupervised machine learning model called **collaborative filtering**. It identifies other user-movie interactions similar to yours and uses them to generate recommendations for movies you might like.")
             cols = st.columns(5)
-            for idx, rec in enumerate(recommendations['collaborative'][:5]):
-                with cols[idx]:
+            valid_poster_count = 0
+            for idx, rec in enumerate(recommendations['collaborative']):
+                if valid_poster_count >= 5:
+                    break
+                with cols[valid_poster_count]:
                     movie_details = fetch_movie_details(rec['movie_id'])
-                    if movie_details:
+                    if movie_details and movie_details['poster_url']:
                         st.image(movie_details['poster_url'], caption=movie_details['title'])
                         if movie_details['genres']:
                             st.write("**Genres:** " + ", ".join(movie_details['genres']))
+                        valid_poster_count += 1
                     else:
-                        st.write(f"Movie ID: {rec['movie_id']}")
+                        continue
 
 # Display welcome message only if first_load is True and no recommendations have been shown
 if st.session_state.first_load:
