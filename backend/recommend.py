@@ -7,6 +7,7 @@ from typing import Optional
 import pyarrow.parquet as pq
 from functools import wraps
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from sklearn.linear_model import Ridge
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -128,17 +129,55 @@ def load_model_data():
     except Exception as e:
         logger.error(f"Failed to load current ratings from {ratings_path}: {str(e)}")
         logger.warning("Continuing with remaining files despite current ratings failure")
+
+    # Load genre data
+    try:
+        genre_path = os.path.join(models_dir, 'movie_genres.parquet')
+        logger.info(f"Attempting to load genre data from {genre_path}")
+        genre_df = load_parquet_with_retry(genre_path)
+        logger.info(f"Successfully loaded genre data with shape: {genre_df.shape}")
+        # Convert index to strings for consistency
+        genre_df.index = genre_df.index.astype(str)
+        model_data['genre_df'] = genre_df
+        logger.info("Genre data loaded and stored in model_data")
+    except Exception as e:
+        logger.error(f"Failed to load genre data from {genre_path}: {str(e)}")
+        logger.warning("Continuing with remaining files despite genre data failure")
+
+    # Load top 100 movies
+    try:
+        top_100_path = os.path.join(models_dir, 'top_100_movies.parquet')
+        logger.info(f"Attempting to load top 100 movies from {top_100_path}")
+        top_100_df = load_parquet_with_retry(top_100_path)
+        logger.info(f"Successfully loaded top 100 movies with shape: {top_100_df.shape}")
+        # Convert movie_id to strings for consistency
+        top_100_df['movie_id'] = top_100_df['movie_id'].astype(str)
+        model_data['top_100_df'] = top_100_df
+        logger.info("Top 100 movies loaded and stored in model_data")
+    except Exception as e:
+        logger.error(f"Failed to load top 100 movies from {top_100_path}: {str(e)}")
+        logger.warning("Continuing with remaining files despite top 100 movies failure")
     
     if not model_data:
         logger.error("No model data was successfully loaded")
         raise RuntimeError("Failed to load any model data")
     
-    logger.info(f"Successfully loaded {len(model_data)} out of 3 data files")
+    logger.info(f"Successfully loaded {len(model_data)} out of 5 data files")
     return model_data
 
 @timing_decorator
 def get_user_content_recommendations(user_id, model_data, n=10):
-    """Get content-based recommendations for a user"""
+    """
+    Get content-based recommendations for a user.
+    
+    Args:
+        user_id: The user ID to get recommendations for
+        model_data: Dictionary containing loaded model data
+        n: Number of recommendations to return
+    
+    Returns:
+        pd.DataFrame: DataFrame with a single 'movie_id' column containing the top N recommended movie IDs
+    """
     logger.info(f"Getting content-based recommendations for user {user_id}")
     
     # Check if content predictions are available
@@ -168,7 +207,17 @@ def get_user_content_recommendations(user_id, model_data, n=10):
 
 @timing_decorator
 def get_user_collab_recommendations(user_id, model_data, n=5):
-    """Get collaborative filtering recommendations for a user"""
+    """
+    Get collaborative filtering recommendations for a user.
+    
+    Args:
+        user_id: The user ID to get recommendations for
+        model_data: Dictionary containing loaded model data
+        n: Number of recommendations to return
+    
+    Returns:
+        pd.DataFrame: DataFrame with a single 'movie_id' column containing the top N recommended movie IDs
+    """
     logger.info(f"Getting collaborative filtering recommendations for user {user_id}")
     
     # Check if collaborative predictions are available
@@ -200,6 +249,14 @@ def get_user_collab_recommendations(user_id, model_data, n=5):
 def get_user_top_rated_movies(user_id, model_data, n=5):
     """
     Get the top n highest rated movies for a given user from their current ratings.
+    
+    Args:
+        user_id: The user ID to get top rated movies for
+        model_data: Dictionary containing loaded model data
+        n: Number of movies to return
+    
+    Returns:
+        pd.DataFrame: DataFrame with a single 'movie_id' column containing the top N rated movie IDs
     """
     logger.info(f"Getting top {n} rated movies for user {user_id}")
     
@@ -229,46 +286,6 @@ def get_user_top_rated_movies(user_id, model_data, n=5):
     return top_rated
 
 @timing_decorator
-def get_recommendations(user_id, model_data=None, n=5):
-    """
-    Get top recommendations from both content-based and collaborative filtering models.
-    Returns top 5 recommendations from each model separately.
-    Uses parallel processing to speed up recommendations.
-    
-    Args:
-        user_id: The user ID to get recommendations for
-        model_data: Optional pre-loaded model data. If None, will load data.
-        n: Number of recommendations to return for each type
-    """
-    try:
-        # Load model data only if not provided (outside timing)
-        if model_data is None:
-            logger.info("No cached model data provided, loading fresh data...")
-            model_data = load_model_data()
-        else:
-            logger.info("Using cached model data for recommendations")
-        
-        # Run recommendations in parallel using ThreadPoolExecutor for I/O-bound tasks
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            content_future = executor.submit(get_user_content_recommendations, user_id, model_data, n)
-            collab_future = executor.submit(get_user_collab_recommendations, user_id, model_data, n)
-            
-            # Get results
-            content_recs = content_future.result()
-            collab_recs = collab_future.result()
-        
-        return {
-            'content_based': content_recs,
-            'collaborative': collab_recs
-        }
-    except Exception as e:
-        logger.error(f"Error in hybrid recommendations for user {user_id}: {str(e)}")
-        return {
-            'content_based': pd.DataFrame(columns=['movie_id']),
-            'collaborative': pd.DataFrame(columns=['movie_id'])
-        }
-
-@timing_decorator
 def get_hybrid_recommendations(user_id, model_data=None, n=10, content_weight=0.5):
     """
     Get hybrid recommendations by combining content-based and collaborative filtering models.
@@ -284,7 +301,7 @@ def get_hybrid_recommendations(user_id, model_data=None, n=10, content_weight=0.
                        - 0.5: Equal mix (default)
     
     Returns:
-        pd.DataFrame: Combined recommendations with weighted scores
+        pd.DataFrame: DataFrame with a single 'movie_id' column containing the top N recommended movie IDs
     """
     try:
         # Load model data only if not provided (outside timing)
@@ -306,7 +323,7 @@ def get_hybrid_recommendations(user_id, model_data=None, n=10, content_weight=0.
         # If either model returned no recommendations, return empty DataFrame
         if content_recs.empty and collab_recs.empty:
             logger.warning(f"No recommendations found for user {user_id}")
-            return pd.DataFrame(columns=['movie_id', 'score'])
+            return pd.DataFrame(columns=['movie_id'])
         
         # Combine recommendations
         combined_recs = pd.DataFrame()
@@ -346,4 +363,106 @@ def get_hybrid_recommendations(user_id, model_data=None, n=10, content_weight=0.
         
     except Exception as e:
         logger.error(f"Error in hybrid recommendations for user {user_id}: {str(e)}")
+        return pd.DataFrame(columns=['movie_id'])
+
+def get_cold_start_recommendations(movies_list, model_data, n=5):
+    """
+    Get recommendations for a new user based on their liked movies using genre-based content filtering.
+    
+    Args:
+        movies_list: List of movie IDs that the new user has liked
+        model_data: Dictionary containing loaded model data
+        n: Number of recommendations to return
+    
+    Returns:
+        pd.DataFrame: DataFrame with a single 'movie_id' column containing the top N recommended movie IDs
+    """
+    try:
+        logger.info(f"Getting cold-start recommendations for {len(movies_list)} liked movies")
+        
+        # Load genre data if not already loaded
+        if 'genre_df' not in model_data:
+            try:
+                genre_path = os.path.join(get_project_root(), 'models', 'movie_genres.parquet')
+                logger.info(f"Loading genre data from {genre_path}")
+                genre_df = load_parquet_with_retry(genre_path)
+                model_data['genre_df'] = genre_df
+            except Exception as e:
+                logger.error(f"Failed to load genre data: {str(e)}")
+                return pd.DataFrame(columns=['movie_id'])
+        
+        genre_df = model_data['genre_df']
+        
+        # Convert movie IDs to strings for consistency
+        movies = [str(movie_id) for movie_id in movies_list]
+        
+        # Check if all movies exist in genre data
+        valid_movies = [movie_id for movie_id in movies if movie_id in genre_df.index]
+        if not valid_movies:
+            logger.warning("No valid movies found in genre data")
+            return pd.DataFrame(columns=['movie_id'])
+        
+        # Get genre features for the liked movies
+        X_train = genre_df.loc[valid_movies].values
+        y_train = np.full(len(valid_movies), 5.0)  # Assume high rating for liked movies
+        
+        # Train Ridge model for the new user
+        new_user_model = Ridge(alpha=1.0)
+        new_user_model.fit(X_train, y_train)
+        
+        # Predict ratings for all movies the user hasn't rated
+        unseen_movie_ids = genre_df.index.difference(valid_movies)
+        X_test = genre_df.loc[unseen_movie_ids].values
+        predicted_ratings = new_user_model.predict(X_test)
+        
+        # Create recommendations DataFrame
+        recommendations = pd.DataFrame({
+            'movie_id': unseen_movie_ids,
+            'rating': predicted_ratings
+        })
+        
+        # Get top N recommendations
+        top_recs = recommendations.nlargest(n, 'rating')[['movie_id']]
+        
+        logger.info(f"Generated {len(top_recs)} cold-start recommendations")
+        return top_recs
+        
+    except Exception as e:
+        logger.error(f"Error in cold-start recommendations: {str(e)}")
+        return pd.DataFrame(columns=['movie_id'])
+
+@timing_decorator
+def get_cold_start_movies(model_data, n=20):
+    """
+    Get n random movies from the top 100 movies list for cold-start recommendations.
+    
+    Args:
+        model_data: Dictionary containing loaded model data
+        n: Number of random movies to return (default: 20)
+    
+    Returns:
+        pd.DataFrame: DataFrame with a single 'movie_id' column containing n random movie IDs from top 100
+    """
+    try:
+        logger.info(f"Getting {n} random movies from top 100 for cold-start recommendations")
+        
+        # Check if top 100 movies are available
+        if 'top_100_df' not in model_data:
+            logger.warning("Top 100 movies not available, returning empty recommendations")
+            return pd.DataFrame(columns=['movie_id'])
+        
+        top_100_df = model_data['top_100_df']
+        
+        if top_100_df.empty:
+            logger.warning("Top 100 movies DataFrame is empty")
+            return pd.DataFrame(columns=['movie_id'])
+        
+        # Get n random movies from top 100
+        random_movies = top_100_df.sample(n=min(n, len(top_100_df)), random_state=42)[['movie_id']]
+        
+        logger.info(f"Selected {len(random_movies)} random movies from top 100")
+        return random_movies
+        
+    except Exception as e:
+        logger.error(f"Error getting cold-start movies: {str(e)}")
         return pd.DataFrame(columns=['movie_id'])

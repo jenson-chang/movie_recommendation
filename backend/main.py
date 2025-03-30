@@ -3,7 +3,13 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
-from recommend import get_hybrid_recommendations, get_user_top_rated_movies, load_model_data
+from recommend import (
+    get_hybrid_recommendations, 
+    get_user_top_rated_movies, 
+    load_model_data,
+    get_cold_start_recommendations,
+    get_cold_start_movies
+)
 
 # Configure logging
 logging.basicConfig(
@@ -112,6 +118,101 @@ async def get_recommendations(user_id: str, n: int = 10, content_weight: float =
         raise HTTPException(
             status_code=500,
             detail=f"Error getting recommendations: {str(e)}"
+        )
+
+@app.get("/cold-start/movies")
+async def get_cold_start_movies_endpoint(n: int = 20):
+    """
+    Get n random movies from the top 100 movies list for cold-start recommendations.
+    
+    Args:
+        n (int): Number of random movies to return (default: 20)
+    
+    Returns:
+        dict: Dictionary containing n random movie IDs from top 100
+    """
+    try:
+        if cached_model_data is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Model data not loaded. Service is initializing."
+            )
+        
+        # Get random movies from top 100
+        random_movies = get_cold_start_movies(cached_model_data, n=n)
+        
+        if random_movies.empty:
+            raise HTTPException(
+                status_code=404,
+                detail="No movies available for cold-start recommendations"
+            )
+            
+        # Format the response
+        formatted_movies = {
+            "movies": [
+                {"movie_id": str(movie_id)}
+                for movie_id in random_movies['movie_id']
+            ]
+        }
+        
+        return formatted_movies
+        
+    except Exception as e:
+        logger.error(f"Error getting cold-start movies: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error getting cold-start movies: {str(e)}"
+        )
+
+@app.post("/cold-start/recommendations")
+async def get_cold_start_recommendations_endpoint(movies: list[str], n: int = 5):
+    """
+    Get personalized recommendations for a new user based on their liked movies.
+    
+    Args:
+        movies (list[str]): List of movie IDs that the new user has liked
+        n (int): Number of recommendations to return (default: 5)
+    
+    Returns:
+        dict: Dictionary containing personalized recommendations based on liked movies
+    """
+    try:
+        if cached_model_data is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Model data not loaded. Service is initializing."
+            )
+        
+        if not movies:
+            raise HTTPException(
+                status_code=400,
+                detail="No movies provided for cold-start recommendations"
+            )
+        
+        # Get personalized recommendations based on liked movies
+        recommendations = get_cold_start_recommendations(movies, cached_model_data, n=n)
+        
+        if recommendations.empty:
+            raise HTTPException(
+                status_code=404,
+                detail="No recommendations found based on the provided movies"
+            )
+            
+        # Format the response
+        formatted_recommendations = {
+            "recommendations": [
+                {"movie_id": str(movie_id)}
+                for movie_id in recommendations['movie_id']
+            ]
+        }
+        
+        return formatted_recommendations
+        
+    except Exception as e:
+        logger.error(f"Error getting cold-start recommendations: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error getting cold-start recommendations: {str(e)}"
         )
 
 @app.get("/")
