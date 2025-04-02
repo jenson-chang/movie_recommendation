@@ -7,6 +7,7 @@ from aws_cdk import (
     aws_logs as logs,
     Duration,
     CfnOutput,
+    RemovalPolicy,
 )
 from constructs import Construct
 import os
@@ -18,16 +19,28 @@ class BackendStack(Stack):
         # Use the shared VPC
         self.vpc = shared_vpc_stack.vpc
 
-        # Create ECS Cluster with container insights disabled for cost savings
-        cluster = ecs.Cluster(self, "MovieRecommendationCluster",
+        # Create security group for the ALB and Fargate tasks
+        service_sg = ec2.SecurityGroup(self, "BackendServiceSecurityGroup",
             vpc=self.vpc,
-            container_insights=False  # Disable container insights for cost savings
+            description="Security group for backend service",
+            allow_all_outbound=True
+        )
+        
+        # Allow inbound HTTP traffic from anywhere
+        service_sg.add_ingress_rule(
+            peer=ec2.Peer.any_ipv4(),
+            connection=ec2.Port.tcp(80)
         )
 
-        # Create CloudWatch Log Group for ECS tasks
+        # Create ECS Cluster
+        cluster = ecs.Cluster(self, "MovieRecommendationCluster",
+            vpc=self.vpc
+        )
+
+        # Create CloudWatch Log Group for ECS tasks with unique name
         log_group = logs.LogGroup(self, "BackendLogGroup",
-            log_group_name=f"/ecs/{construct_id}",
-            retention=logs.RetentionDays.ONE_WEEK  # Reduced retention for cost savings
+            log_group_name=f"/ecs/{construct_id}-{self.account}-{self.region}",
+            retention=logs.RetentionDays.ONE_WEEK,  # Reduced retention for cost savings
         )
 
         # Get Docker image configuration from environment variables
@@ -58,8 +71,16 @@ class BackendStack(Stack):
             health_check_grace_period=Duration.seconds(int(os.getenv("HEALTH_CHECK_GRACE_PERIOD", "60"))),
             circuit_breaker=ecs.DeploymentCircuitBreaker(
                 rollback=True  # Enable automatic rollback on deployment failures
-            )
+            ),
+            security_groups=[service_sg],  # Use the shared security group
+            load_balancer_name="movie-backend-alb"  # Shortened name for the ALB
         )
+
+        # Add security group to the ALB
+        fargate_service.load_balancer.add_security_group(service_sg)
+
+        # Add removal policy to the load balancer
+        fargate_service.load_balancer.apply_removal_policy(RemovalPolicy.DESTROY)
 
         # Store the ALB DNS name as a property
         self.backend_alb_dns = fargate_service.load_balancer.load_balancer_dns_name

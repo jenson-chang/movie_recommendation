@@ -12,9 +12,9 @@ class SharedVPCStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        # Create a cost-optimized VPC with single AZ
-        self.vpc = ec2.Vpc(self, "PortfolioVPC",
-            max_azs=1,  # Use single AZ to minimize costs
+        # Create a shared VPC for all portfolio apps
+        self.vpc = ec2.Vpc(self, "SharedVPC",
+            max_azs=2,
             nat_gateways=0,  # Disable NAT Gateways as we'll use a NAT instance
             subnet_configuration=[
                 ec2.SubnetConfiguration(
@@ -76,11 +76,12 @@ class SharedVPCStack(Stack):
             connection=ec2.Port.all_traffic()
         )
 
-        # Create the NAT instance with spot instance for cost savings
+        # Create the NAT instance in the first AZ
         nat_instance = ec2.Instance(self, "NATInstance",
             vpc=self.vpc,
             vpc_subnets=ec2.SubnetSelection(
-                subnet_type=ec2.SubnetType.PUBLIC
+                subnet_type=ec2.SubnetType.PUBLIC,
+                availability_zones=[self.vpc.availability_zones[0]]  # Use first AZ only
             ),
             instance_type=ec2.InstanceType.of(
                 ec2.InstanceClass.T3,
@@ -114,7 +115,7 @@ class SharedVPCStack(Stack):
         # Create CloudWatch Log Group for VPC Flow Logs with shorter retention
         flow_log_group = logs.LogGroup(self, "VPCFlowLogGroup",
             log_group_name=f"/vpc/flow-logs/{construct_id}",
-            retention=logs.RetentionDays.ONE_WEEK  # Reduced retention for cost savings
+            retention=logs.RetentionDays.ONE_WEEK
         )
 
         # Create IAM role for VPC Flow Logs
@@ -151,9 +152,9 @@ class SharedVPCStack(Stack):
             )
 
         # Output the VPC ID and NAT instance ID
-        CfnOutput(self, "PortfolioVPCId",
+        CfnOutput(self, "SharedVPCId",
             value=self.vpc.vpc_id,
-            description="Portfolio VPC ID"
+            description="Shared VPC ID"
         )
         CfnOutput(self, "NATInstanceId",
             value=nat_instance.instance_id,

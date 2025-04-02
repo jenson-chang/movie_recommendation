@@ -23,16 +23,28 @@ class FrontendStack(Stack):
         # Use the shared VPC
         vpc = shared_vpc_stack.vpc
 
-        # Create ECS Cluster with container insights disabled for cost savings
-        cluster = ecs.Cluster(self, "MovieRecommendationFrontendCluster",
+        # Create security group for the ALB and Fargate tasks
+        service_sg = ec2.SecurityGroup(self, "FrontendServiceSecurityGroup",
             vpc=vpc,
-            container_insights=False  # Disable container insights for cost savings
+            description="Security group for frontend service",
+            allow_all_outbound=True
+        )
+        
+        # Allow inbound HTTP traffic from anywhere
+        service_sg.add_ingress_rule(
+            peer=ec2.Peer.any_ipv4(),
+            connection=ec2.Port.tcp(80)
+        )
+
+        # Create ECS Cluster
+        cluster = ecs.Cluster(self, "MovieRecommendationFrontendCluster",
+            vpc=vpc
         )
 
         # Create CloudWatch Log Group for ECS tasks
         log_group = logs.LogGroup(self, "FrontendLogGroup",
             log_group_name=f"/ecs/{construct_id}",
-            retention=logs.RetentionDays.ONE_WEEK  # Reduced retention for cost savings
+            retention=logs.RetentionDays.ONE_WEEK
         )
 
         # Create Secrets Manager secret for TMDB API key
@@ -73,8 +85,13 @@ class FrontendStack(Stack):
             health_check_grace_period=Duration.seconds(int(os.getenv("HEALTH_CHECK_GRACE_PERIOD", "60"))),
             circuit_breaker=ecs.DeploymentCircuitBreaker(
                 rollback=True  # Enable automatic rollback on deployment failures
-            )
+            ),
+            security_groups=[service_sg],  # Use the shared security group
+            load_balancer_name="movie-frontend-alb"  # Shortened name for the ALB
         )
+
+        # Add security group to the ALB
+        fargate_service.load_balancer.add_security_group(service_sg)
 
         # Grant the task role permission to access the secret
         tmdb_secret.grant_read(fargate_service.task_definition.task_role)

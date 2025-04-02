@@ -12,7 +12,7 @@ load_dotenv()
 app = cdk.App()
 
 # Create the shared VPC stack
-shared_vpc_stack = SharedVPCStack(app, "PortfolioSharedVPCStack",
+shared_vpc_stack = SharedVPCStack(app, "SharedVPCStack",
     env=cdk.Environment(
         account=os.getenv("CDK_DEFAULT_ACCOUNT"),
         region=os.getenv("CDK_DEFAULT_REGION")
