@@ -3,6 +3,8 @@ name: Backend Docker Image CI
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
     paths:
       - .github/workflows/docker-publish-backend.yml
       - backend/**
