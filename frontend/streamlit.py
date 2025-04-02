@@ -109,10 +109,12 @@ except KeyError:
     # Fall back to local Docker service name
     BACKEND_URL = "http://backend:8000"
 
+@st.cache_data(ttl=3600)  # Cache for 1 hour
 def fetch_movie_details(movie_id):
     """
     Fetch movie details including poster path and genres from TMDb API.
     Returns None if movie details cannot be fetched.
+    Cached for 1 hour to reduce API calls.
     """
     try:
         # Convert movie_id to integer, handling string with decimal point
