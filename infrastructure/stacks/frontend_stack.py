@@ -9,6 +9,7 @@ from aws_cdk import (
     aws_logs as logs,
     Duration,
     CfnOutput,
+    RemovalPolicy,
 )
 from constructs import Construct
 import os
@@ -41,10 +42,11 @@ class FrontendStack(Stack):
             vpc=vpc
         )
 
-        # Create CloudWatch Log Group for ECS tasks
+        # Create CloudWatch Log Group for ECS tasks with optimized settings
         log_group = logs.LogGroup(self, "FrontendLogGroup",
             log_group_name=f"/ecs/{construct_id}",
-            retention=logs.RetentionDays.ONE_WEEK
+            retention=logs.RetentionDays.THREE_DAYS,  # Reduced retention for cost savings
+            removal_policy=RemovalPolicy.DESTROY  # Clean up logs when stack is destroyed
         )
 
         # Create Secrets Manager secret for TMDB API key
@@ -71,13 +73,15 @@ class FrontendStack(Stack):
                 environment={
                     "AWS_REGION": os.getenv("CDK_DEFAULT_REGION"),
                     "REACT_APP_API_URL": f"http://{backend_alb_dns}",  # Use backend ALB DNS name
+                    "LOG_LEVEL": "WARNING",  # Set default log level
                 },
                 secrets={
                     "TMDB_API_KEY": ecs.Secret.from_secrets_manager(tmdb_secret, field="TMDB_API_KEY")
                 },
                 log_driver=ecs.LogDriver.aws_logs(
                     stream_prefix="frontend",
-                    log_group=log_group
+                    log_group=log_group,
+                    mode=ecs.AwsLogDriverMode.NON_BLOCKING  # Prevent logging from blocking the application
                 )
             ),
             public_load_balancer=True,  # Make the ALB public-facing

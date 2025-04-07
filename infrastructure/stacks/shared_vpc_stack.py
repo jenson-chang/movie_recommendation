@@ -38,30 +38,40 @@ class SharedVPCStack(Stack):
             }
         )
 
-        # Create interface endpoints
+        # Create interface endpoints with optimized AZ configuration
         ec2.InterfaceVpcEndpoint(self, "ECREndpoint",
             vpc=self.vpc,
             service=ec2.InterfaceVpcEndpointAwsService.ECR,
-            private_dns_enabled=True
+            private_dns_enabled=True,
+            subnets=ec2.SubnetSelection(
+                subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS,
+                availability_zones=[self.vpc.availability_zones[0]]  # Use only first AZ
+            )
         )
 
-        ec2.InterfaceVpcEndpoint(self, "ECRDockerEndpoint",
-            vpc=self.vpc,
-            service=ec2.InterfaceVpcEndpointAwsService.ECR_DOCKER,
-            private_dns_enabled=True
-        )
+        # Only create Secrets Manager endpoint if needed
+        if os.getenv("USE_SECRETS_MANAGER", "true").lower() == "true":
+            ec2.InterfaceVpcEndpoint(self, "SecretsManagerEndpoint",
+                vpc=self.vpc,
+                service=ec2.InterfaceVpcEndpointAwsService.SECRETS_MANAGER,
+                private_dns_enabled=True,
+                subnets=ec2.SubnetSelection(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS,
+                    availability_zones=[self.vpc.availability_zones[0]]  # Use only first AZ
+                )
+            )
 
-        ec2.InterfaceVpcEndpoint(self, "SecretsManagerEndpoint",
-            vpc=self.vpc,
-            service=ec2.InterfaceVpcEndpointAwsService.SECRETS_MANAGER,
-            private_dns_enabled=True
-        )
-
-        ec2.InterfaceVpcEndpoint(self, "CloudWatchLogsEndpoint",
-            vpc=self.vpc,
-            service=ec2.InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS,
-            private_dns_enabled=True
-        )
+        # Only create CloudWatch Logs endpoint if needed
+        if os.getenv("USE_CLOUDWATCH_LOGS", "true").lower() == "true":
+            ec2.InterfaceVpcEndpoint(self, "CloudWatchLogsEndpoint",
+                vpc=self.vpc,
+                service=ec2.InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS,
+                private_dns_enabled=True,
+                subnets=ec2.SubnetSelection(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS,
+                    availability_zones=[self.vpc.availability_zones[0]]  # Use only first AZ
+                )
+            )
 
         # Create a security group for the NAT instance
         nat_sg = ec2.SecurityGroup(self, "NATInstanceSecurityGroup",
@@ -110,36 +120,6 @@ class SharedVPCStack(Stack):
             "systemctl start iptables",
             "iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE",
             "iptables-save > /etc/sysconfig/iptables"
-        )
-
-        # Create CloudWatch Log Group for VPC Flow Logs with shorter retention
-        flow_log_group = logs.LogGroup(self, "VPCFlowLogGroup",
-            log_group_name=f"/vpc/flow-logs/{construct_id}",
-            retention=logs.RetentionDays.ONE_WEEK
-        )
-
-        # Create IAM role for VPC Flow Logs
-        flow_log_role = iam.Role(self, "VPCFlowLogRole",
-            assumed_by=iam.ServicePrincipal("vpc-flow-logs.amazonaws.com")
-        )
-        flow_log_role.add_to_policy(
-            iam.PolicyStatement(
-                actions=[
-                    "logs:CreateLogStream",
-                    "logs:PutLogEvents",
-                    "logs:DescribeLogStreams"
-                ],
-                resources=[flow_log_group.log_group_arn]
-            )
-        )
-
-        # Add VPC Flow Logs for security monitoring
-        self.vpc.add_flow_log("VPCFlowLog",
-            destination=ec2.FlowLogDestination.to_cloud_watch_logs(
-                log_group=flow_log_group,
-                iam_role=flow_log_role
-            ),
-            traffic_type=ec2.FlowLogTrafficType.ALL
         )
 
         # Create route tables for private subnets to route through NAT instance

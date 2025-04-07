@@ -37,10 +37,11 @@ class BackendStack(Stack):
             vpc=self.vpc
         )
 
-        # Create CloudWatch Log Group for ECS tasks with unique name
+        # Create CloudWatch Log Group for ECS tasks with optimized settings
         log_group = logs.LogGroup(self, "BackendLogGroup",
             log_group_name=f"/ecs/{construct_id}-{self.account}-{self.region}",
-            retention=logs.RetentionDays.ONE_WEEK,  # Reduced retention for cost savings
+            retention=logs.RetentionDays.THREE_DAYS,  # Reduced retention for cost savings
+            removal_policy=RemovalPolicy.DESTROY  # Clean up logs when stack is destroyed
         )
 
         # Get Docker image configuration from environment variables
@@ -54,16 +55,18 @@ class BackendStack(Stack):
             cluster=cluster,
             cpu=int(os.getenv("BACKEND_CPU", "256")),
             memory_limit_mib=int(os.getenv("BACKEND_MEMORY", "512")),
-            desired_count=int(os.getenv("DESIRED_COUNT", "1")),  # Reduced default desired count
+            desired_count=int(os.getenv("DESIRED_COUNT", "1")),
             task_image_options=ecs_patterns.ApplicationLoadBalancedTaskImageOptions(
                 image=ecs.ContainerImage.from_registry(backend_image),
                 container_port=int(os.getenv("BACKEND_PORT", "8000")),
                 environment={
                     "AWS_REGION": os.getenv("CDK_DEFAULT_REGION"),
+                    "LOG_LEVEL": "WARNING",  # Set default log level
                 },
                 log_driver=ecs.LogDriver.aws_logs(
                     stream_prefix="backend",
-                    log_group=log_group
+                    log_group=log_group,
+                    mode=ecs.AwsLogDriverMode.NON_BLOCKING  # Prevent logging from blocking the application
                 )
             ),
             public_load_balancer=True,
