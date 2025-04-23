@@ -1,6 +1,7 @@
 import requests
 import streamlit as st
 import os
+import pandas as pd
 
 # Set page to wide mode and configure initial page settings
 st.set_page_config(
@@ -138,12 +139,15 @@ def fetch_movie_details(movie_id):
     except Exception:
         return None  # Silently return None for any error
 
-def get_recommendations(user_id: int):
+def get_recommendations(user_id: int, initial_movies=None):
     """
     Get movie recommendations from the backend API.
     """
     try:
-        response = requests.get(f"{BACKEND_URL}/recommendations/{user_id}?n=20")
+        params = {'n': 20}
+        if initial_movies:
+            params['initial_movies'] = initial_movies
+        response = requests.get(f"{BACKEND_URL}/recommendations/{user_id}", params=params)
         response.raise_for_status()
         data = response.json()
         return data
@@ -151,7 +155,7 @@ def get_recommendations(user_id: int):
         st.error(f"Error connecting to backend: {str(e)}")
         return None
 
-# Initialize session state for first load and user ID
+# Initialize session state
 if 'first_load' not in st.session_state:
     st.session_state.first_load = True
 if 'user_id' not in st.session_state:
@@ -160,29 +164,88 @@ if 'recommendations' not in st.session_state:
     st.session_state.recommendations = None
 if 'input_user_id' not in st.session_state:
     st.session_state.input_user_id = 1
+if 'is_new_user' not in st.session_state:
+    st.session_state.is_new_user = False
+if 'selected_movies' not in st.session_state:
+    st.session_state.selected_movies = []
 
 # Main content area
 st.sidebar.title("MOVIE RECOMMENDATION")
 
 st.sidebar.markdown("---")  # Add separator
 
-# Add user input section to sidebar
-input_user_id = st.sidebar.number_input(
-    "Enter a user ID to see their recommendations (1 to 610)", 
-    min_value=1, 
-    max_value=610, 
-    value=st.session_state.input_user_id,
-    key="user_id_input"
+# User type selection
+user_type = st.sidebar.radio(
+    "Are you a new user?",
+    ["Existing User", "New User"],
+    index=0
 )
 
-# Update input_user_id in session state when the input changes
-st.session_state.input_user_id = input_user_id
-
-if st.sidebar.button("Get Recommendations"):
-    # Update the session state user ID only when button is clicked
-    st.session_state.user_id = st.session_state.input_user_id
-    st.session_state.first_load = False  # Update first load state
-    st.session_state.recommendations = get_recommendations(str(st.session_state.user_id))
+if user_type == "New User":
+    st.session_state.is_new_user = True
+    st.sidebar.markdown("""
+        <div style='font-size: 1rem; color: #ffffff; margin-bottom: 1rem;'>
+            Please select 10 movies you like to get personalized recommendations.
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # Movie search and selection
+    search_query = st.sidebar.text_input("Search for movies")
+    if search_query:
+        search_url = f"{TMDB_BASE_URL}/search/movie"
+        response = requests.get(search_url, params={
+            'api_key': TMDB_API_KEY,
+            'query': search_query
+        })
+        if response.status_code == 200:
+            results = response.json()['results']
+            for movie in results[:5]:  # Show top 5 results
+                if movie['poster_path']:
+                    poster_url = f"https://image.tmdb.org/t/p/w200{movie['poster_path']}"
+                    col1, col2 = st.sidebar.columns([1, 3])
+                    with col1:
+                        st.image(poster_url, width=100)
+                    with col2:
+                        st.write(movie['title'])
+                        if st.button(f"Select {movie['title']}", key=f"select_{movie['id']}"):
+                            if len(st.session_state.selected_movies) < 10:
+                                st.session_state.selected_movies.append(str(movie['id']))
+                                st.success(f"Added {movie['title']} to your selections")
+                            else:
+                                st.warning("You've already selected 10 movies")
+    
+    # Show selected movies
+    if st.session_state.selected_movies:
+        st.sidebar.markdown("### Your Selected Movies")
+        for movie_id in st.session_state.selected_movies:
+            movie_details = fetch_movie_details(movie_id)
+            if movie_details:
+                st.sidebar.write(f"- {movie_details['title']}")
+        
+        if len(st.session_state.selected_movies) == 10:
+            if st.sidebar.button("Get Recommendations"):
+                st.session_state.recommendations = get_recommendations(
+                    user_id="new_user",
+                    initial_movies=st.session_state.selected_movies
+                )
+                st.session_state.first_load = False
+else:
+    st.session_state.is_new_user = False
+    # Add user input section to sidebar for existing users
+    input_user_id = st.sidebar.number_input(
+        "Enter a user ID to see their recommendations (1 to 610)", 
+        min_value=1, 
+        max_value=610, 
+        value=st.session_state.input_user_id,
+        key="user_id_input"
+    )
+    
+    st.session_state.input_user_id = input_user_id
+    
+    if st.sidebar.button("Get Recommendations"):
+        st.session_state.user_id = st.session_state.input_user_id
+        st.session_state.first_load = False
+        st.session_state.recommendations = get_recommendations(str(st.session_state.user_id))
 
 st.sidebar.markdown("""
     <div style='font-size: 0.9rem; color: #888888; margin-bottom: 1rem;'>
@@ -197,8 +260,8 @@ if st.session_state.recommendations is not None:
     if not recommendations['recommendations'] and not recommendations['top_rated']:
         st.warning(f"No recommendations found for user ID {st.session_state.user_id}")
     else:
-        # Display Top Rated Movies
-        if recommendations['top_rated']:
+        # Display Top Rated Movies (only for existing users)
+        if not st.session_state.is_new_user and recommendations['top_rated']:
             st.write("### **Your Top Rated**")
             with st.expander("*Learn more about your top rated movies*"):
                 st.write("These are the movies you've rated highest in your viewing history. They help us understand your preferences and generate personalized recommendations.")
@@ -220,17 +283,16 @@ if st.session_state.recommendations is not None:
         
         st.markdown("---")  # Add separator
         
-        # Display Combined Recommendations
+        # Display Recommendations
         if recommendations['recommendations']:
             st.write("### **Recommended for You**")
             with st.expander("*Learn more about your recommendations*"):
                 st.write("""
-                These recommendations are generated using a hybrid approach that combines two powerful machine learning models:
+                These recommendations are generated using Neural Collaborative Filtering (NCF), a state-of-the-art recommendation algorithm that:
                 
-                - **Content-Based Filtering:** Uses movie metadata (genres) to create feature vectors and recommend similar movies
-                - **Collaborative Filtering:** Identifies patterns in user preferences via matrix factorization of user-movie ratings
-                
-                The final recommendations are weighted combinations of both approaches to give you the best of both worlds!
+                - Learns from user-movie interactions
+                - Combines matrix factorization with neural networks
+                - Provides personalized recommendations based on your preferences
                 """)
             
             cols = st.columns(5)

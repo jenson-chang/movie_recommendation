@@ -1,9 +1,11 @@
 fastapi
 uvicorn
-numpy<2.0
+numpy
 pandas
-scikit-surprise
-pyarrow
-requests 
+requests
 python-multipart
 pydantic
+tensorflow-macos
+tensorflow-metal
+pyarrow
+recommenders

@@ -3,13 +3,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
-from recommend import (
-    get_hybrid_recommendations, 
-    get_user_top_rated_movies, 
-    load_model_data,
-    get_cold_start_recommendations,
-    get_cold_start_movies
-)
+from recommend import get_recommendations, load_model_data
 
 # Configure logging
 logging.basicConfig(
@@ -58,21 +52,16 @@ app.add_middleware(
 )
 
 @app.get("/recommendations/{user_id}")
-async def get_recommendations(user_id: str, n: int = 10, content_weight: float = 0.5):
+async def get_recommendations_endpoint(user_id: str, n: int = 10):
     """
-    Get hybrid movie recommendations for a specific user, combining content-based and collaborative filtering models,
-    along with their top rated movies.
+    Get movie recommendations for a specific user using the NCF model.
     
     Args:
         user_id (str): The user ID to get recommendations for
         n (int): Number of recommendations to return (default: 10)
-        content_weight (float): Weight for content-based recommendations (0 to 1, default: 0.5)
-                              - 1.0: Only content-based
-                              - 0.0: Only collaborative
-                              - 0.5: Equal mix
         
     Returns:
-        dict: Dictionary containing hybrid recommendations and top rated movies
+        dict: Dictionary containing recommendations
     """
     try:
         if cached_model_data is None:
@@ -81,33 +70,19 @@ async def get_recommendations(user_id: str, n: int = 10, content_weight: float =
                 detail="Model data not loaded. Service is initializing."
             )
         
-        # Get hybrid recommendations using cached data
-        recommendations = get_hybrid_recommendations(
+        # Get recommendations using cached data
+        recommendations_df = get_recommendations(
             user_id, 
             model_data=cached_model_data, 
-            n=n,
-            content_weight=content_weight
+            n=n
         )
-        
-        # Get top rated movies
-        top_rated = get_user_top_rated_movies(user_id, cached_model_data, n=n)
-        
-        if recommendations.empty and top_rated.empty:
-            raise HTTPException(
-                status_code=404,
-                detail=f"No recommendations or ratings found for user {user_id}"
-            )
             
         # Format the response
         formatted_recommendations = {
             "user_id": user_id,
             "recommendations": [
                 {"movie_id": str(movie_id)}
-                for movie_id in recommendations['movie_id']
-            ],
-            "top_rated": [
-                {"movie_id": str(movie_id)}
-                for movie_id in top_rated['movie_id']
+                for movie_id in recommendations_df['movie_id']
             ]
         }
         

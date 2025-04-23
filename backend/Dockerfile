@@ -1,5 +1,20 @@
 FROM python:3.11
 
+# Install system dependencies required by TensorFlow
+RUN apt-get update && apt-get install -y \
+    libhdf5-dev \
+    libc-ares-dev \
+    libeigen3-dev \
+    gcc \
+    gfortran \
+    libgfortran5 \
+    libatlas-base-dev \
+    libopenblas-dev \
+    libblas-dev \
+    liblapack-dev \
+    cython3 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Set working directory
 WORKDIR /app
 
@@ -7,7 +22,7 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install Python dependencies
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Create models directory
 RUN mkdir -p models
