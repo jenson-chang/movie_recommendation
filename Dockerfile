@@ -1,26 +1,11 @@
-FROM python:3.11
-
-# Install system dependencies required by TensorFlow
-RUN apt-get update && apt-get install -y \
-    libhdf5-dev \
-    libc-ares-dev \
-    libeigen3-dev \
-    gcc \
-    gfortran \
-    libgfortran5 \
-    libatlas-base-dev \
-    libopenblas-dev \
-    libblas-dev \
-    liblapack-dev \
-    cython3 \
-    && rm -rf /var/lib/apt/lists/*
+FROM tensorflow/tensorflow:latest
 
 # Set working directory
 WORKDIR /app
 
 # Copy and install requirements
 COPY requirements.txt requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --ignore-installed -r requirements.txt
 
 # Create models directory
 RUN mkdir -p models
