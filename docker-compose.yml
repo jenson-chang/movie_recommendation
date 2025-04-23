@@ -1,34 +1,21 @@
 version: '3.8'
 
 services:
-  frontend:
-    build: frontend
-    ports:
-      - 8501:8501
-    depends_on:
-      - backend
-    volumes:
-      - ./frontend:/app
-    restart: always
-    networks:
-      - app
-    container_name: frontend
-    
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+  app:
+    build: .
     ports:
       - "8000:8000"
+      - "8501:8501"
     volumes:
-      - ./backend:/app
+      - ./frontend:/app/frontend
+      - ./backend:/app/backend
       - ./backend/models:/app/models
     environment:
       - PYTHONUNBUFFERED=1
     restart: always
     networks:
       - app
-    container_name: backend
+    container_name: movie-recommendation
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -38,6 +25,3 @@ services:
 networks:
   app:
     driver: bridge
-
-volumes:
-  backend-models:

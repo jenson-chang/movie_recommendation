@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+numpy
+pandas
+requests
+python-multipart
+pydantic
+tensorflow-macos
+tensorflow-metal
+pyarrow
+recommenders
+streamlit
+requests 
