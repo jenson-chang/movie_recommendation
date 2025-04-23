@@ -1,9 +1,0 @@
-fastapi
-uvicorn
-numpy<2.0
-pandas
-scikit-surprise
-pyarrow
-requests 
-python-multipart
-pydantic

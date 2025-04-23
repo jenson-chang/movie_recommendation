@@ -99,3 +99,9 @@ frontend/.streamlit/secrets.toml
 model/data/ml-latest-small.zip
 model/data/ml-latest.zip
 /model/data/ml-latest
+notebook/data/links.csv
+notebook/data/movies.csv
+notebook/data/ratings.csv
+notebook/data/tags.csv
+notebook/test_matrix.npz
+notebook/train_matrix.npz

@@ -1,0 +1,11 @@
+streamlit
+requests
+fastapi
+uvicorn
+numpy
+pandas
+pyarrow
+python-multipart
+pydantic
+lightfm==1.17
+scikit-learn
