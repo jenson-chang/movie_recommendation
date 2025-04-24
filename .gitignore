@@ -105,3 +105,6 @@ notebook/data/ratings.csv
 notebook/data/tags.csv
 notebook/test_matrix.npz
 notebook/train_matrix.npz
+notebook/models/item_features.npz
+notebook/models/test_matrix.npz
+notebook/models/train_matrix.npz
