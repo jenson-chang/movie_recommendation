@@ -7,3 +7,4 @@ pyarrow
 requests 
 python-multipart
 pydantic
+streamlit
