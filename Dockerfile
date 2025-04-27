@@ -21,7 +21,7 @@ ENV PYTHONPATH=/app/backend:$PYTHONPATH
 
 # Set environment variables
 ENV TMDB_API_KEY=${TMDB_API_KEY}
-ENV REACT_APP_API_URL=http://localhost:8000
+ENV BACKEND_API_URL=http://localhost:8000
 
 # Expose ports for both services
 EXPOSE 8000 8501

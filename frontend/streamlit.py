@@ -104,7 +104,7 @@ TMDB_BASE_URL = "https://api.themoviedb.org/3"
 # Configure backend URL based on environment
 try:
     # Try to get backend URL from environment variable (production)
-    BACKEND_URL = os.environ["REACT_APP_API_URL"]
+    BACKEND_URL = os.environ["BACKEND_API_URL"]
 except KeyError:
     # Fall back to local Docker service name
     BACKEND_URL = "http://backend:8000"
